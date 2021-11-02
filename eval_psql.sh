@@ -1,9 +1,12 @@
 PREFIX="${1}"
+ABS="$(readlink -m "$(dirname "${PREFIX}")")"/"$(basename "${PREFIX}")"
 
-./src/rtrans.native "${PREFIX}"
+/home/rcsql/src/rtrans.native "${ABS}"
 
-./radb.sh "${PREFIX}"
+/home/rcsql/tools/db2csv "${ABS}"
 
-psql < "${PREFIX}.psql" &> /dev/null
+/home/rcsql/radb.sh "${ABS}"
 
-./run_psql.sh "${PREFIX}.a"
+psql < "${ABS}.psql" &> /dev/null
+
+/home/rcsql/run_psql.sh "${ABS}.a"

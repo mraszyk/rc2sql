@@ -1,14 +1,15 @@
 PREFIX="${1}"
+ABS="$(readlink -m "$(dirname "${PREFIX}")")"/"$(basename "${PREFIX}")"
 
-grep -o "[A-Za-z0-9]*([A-Za-z0-9, ]*)" "${PREFIX}.fo" | sed "s/[A-Za-z0-9]* *,/int,/g" | sed "s/[A-Za-z0-9]* *)/int)/g" > "${PREFIX}.sig"
-echo "@0 " > "${PREFIX}.log"
-cat "${PREFIX}.db" >> "${PREFIX}.log"
+grep -o "[A-Za-z0-9]*([A-Za-z0-9, ]*)" "${ABS}.fo" | sed "s/[A-Za-z0-9]* *,/int,/g" | sed "s/[A-Za-z0-9]* *)/int)/g" > "${ABS}.sig"
+echo "@0 " > "${ABS}.log"
+cat "${ABS}.db" >> "${ABS}.log"
 
-./src/rtrans.native "${PREFIX}"
+/home/rcsql/src/rtrans.native "${ABS}"
 
-. ./functions.sh
-symlinks "$(readlink -m "$(dirname "${PREFIX}")")"/"$(basename "${PREFIX}")"
+. /home/rcsql/functions.sh
+symlinks "${ABS}"
 
-./radb.sh "${PREFIX}"
+/home/rcsql/radb.sh "${ABS}"
 
-./run_vmon.sh "${PREFIX}.a"
+/home/rcsql/run_vmon.sh "${ABS}.a"
