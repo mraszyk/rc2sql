@@ -41,13 +41,13 @@ mysql -u rcsql --local-infile=1 < "${pref}.msql"
 
 for s in ${sufs}
 do
-  timeout "${to}" bash -c "/home/rcsql/rw_psql.sh ${pref}.${s}" > "${pref}.${s}p"
+  timeout "${to}" bash -c "/home/rcsql/run_psql.sh ${pref}.${s}" > "${pref}.${s}p"
   status="${?}"
   checkstat "${s}p"
   killPSQL
   pstatus="${status}"
 
-  timeout "${to}" bash -c "/home/rcsql/rw_msql.sh ${pref}.${s}" > "${pref}.${s}m"
+  timeout "${to}" bash -c "/home/rcsql/run_msql.sh ${pref}.${s}" > "${pref}.${s}m"
   status="${?}"
   checkstat "${s}m"
   killMSQL
@@ -58,7 +58,7 @@ do
     echo "${d}(p-m): ${pref}/${s}" >> log.txt
   fi
 
-  timeout "${to}" bash -c "/home/rcsql/rw_vmon.sh ${pref}.${s}" > "${pref}.${s}v"
+  timeout "${to}" bash -c "/home/rcsql/run_vmon.sh ${pref}.${s}" > "${pref}.${s}v"
   status="${?}"
   checkstat "${s}v"
   vstatus="${status}"
@@ -75,7 +75,7 @@ do
   for conf in "-m" ""
   do
     conff="$(echo ${conf} | sed "s/[ -]//g")"
-    timeout "${to}" bash -c "/home/rcsql/rw_sqlite.sh ${pref} ${s} ${conf}" > "${pref}.${conff}.${s}l"
+    timeout "${to}" bash -c "/home/rcsql/run_sqlite.sh ${pref} ${s} ${conf}" > "${pref}.${conff}.${s}l"
     status="${?}"
     checkstat "${conff}.${s}l"
     d=$(/home/rcsql/tools/cmp "${pref}.${s}p" "${pref}.${conff}.${s}l")

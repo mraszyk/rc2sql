@@ -39,8 +39,8 @@ then
   exit 1
 fi
 symlinks "${pref}"
-/home/rcsql/rw_vmon.sh "${pref}.a" > "${pref}.a"
-/home/rcsql/rw_vmon.sh "${pref}.s" > "${pref}.s"
+/home/rcsql/run_vmon.sh "${pref}.a" > "${pref}.a"
+/home/rcsql/run_vmon.sh "${pref}.s" > "${pref}.s"
 sufs="a s"
 if [[ "${fvgen}" == "1" ]]
 then
@@ -55,8 +55,8 @@ then
     echo "${pref} VGTRANSL." >> log.txt
     exit 1
   fi
-  /home/rcsql/rw_vmon.sh "${pref}.va" > "${pref}.va"
-  /home/rcsql/rw_vmon.sh "${pref}.vs" > "${pref}.vs"
+  /home/rcsql/run_vmon.sh "${pref}.va" > "${pref}.va"
+  /home/rcsql/run_vmon.sh "${pref}.vs" > "${pref}.vs"
   sufs="${sufs} va vs"
 fi
 for s in ${sufs}

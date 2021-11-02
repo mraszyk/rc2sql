@@ -1,0 +1,1 @@
+B(b) AND EXISTS u. EXISTS s. FORALL p. NOT P(b, p) OR S(p, u, s)

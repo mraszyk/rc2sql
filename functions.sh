@@ -99,18 +99,18 @@ function symlinks() {
 }
 
 function run01SPSQL() {
-  run "psql < z_${i}.psql; ./rw_psql.sh z_${i}.s"
+  run "psql < z_${i}.psql; ./run_psql.sh z_${i}.s"
   killPSQL
 }
 function run01APSQL() {
-  run "psql < z_${i}.psql; ./rw_psql.sh z_${i}.a"
+  run "psql < z_${i}.psql; ./run_psql.sh z_${i}.a"
   killPSQL
 }
 
 function run02SPSQL() {
   if [[ -f z_${i}.vsfin ]]
   then
-    run "psql < z_${i}.psql; ./rw_psql.sh z_${i}.vs"
+    run "psql < z_${i}.psql; ./run_psql.sh z_${i}.vs"
     killPSQL
   else
     echo -n "\\vgtna"
@@ -119,7 +119,7 @@ function run02SPSQL() {
 function run02APSQL() {
   if [[ -f z_${i}.vafin ]]
   then
-    run "psql < z_${i}.psql; ./rw_psql.sh z_${i}.va"
+    run "psql < z_${i}.psql; ./run_psql.sh z_${i}.va"
     killPSQL
   else
     echo -n "\\vgtna"
