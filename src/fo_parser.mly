@@ -10,7 +10,7 @@
 %left CONJ
 %nonassoc NEG
 
-%type <(int, string) FO.FO.fmla> formula
+%type <int FO.FO.fmla> formula
 %start formula
 
 %%

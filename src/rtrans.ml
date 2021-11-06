@@ -6,5 +6,5 @@ let _ =
   let _ = rtrans (prefix ^ ".") tdb (*db *)f in
   let _ =
     (let ch = open_out (prefix ^ ".mfotl") in
-     Printf.fprintf ch "%s\n" (mfotl_of_fmla f); close_out ch) in
+     Printf.fprintf ch "%s\n" (FO.FO.string_of_fmla string_of_int (fun x -> "?" ^ x) f); close_out ch) in
   ()

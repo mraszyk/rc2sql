@@ -1,46 +1,46 @@
 module FO : sig
-  type ('a, 'b) term =
+  type 'a term =
       Const of 'a
-    | Var of 'b
-    | Mult of ('a, 'b) term * ('a, 'b) term
-  type ('a, 'b) fmla =
+    | Var of string
+    | Mult of 'a term * 'a term
+  type 'a fmla =
       False
     | True
-    | Eq of 'b * ('a, 'b) term
-    | Pred of string * ('a, 'b) term list
-    | Neg of ('a, 'b) fmla
-    | Disj of ('a, 'b) fmla * ('a, 'b) fmla
-    | Conj of ('a, 'b) fmla * ('a, 'b) fmla
-    | Exists of 'b * ('a, 'b) fmla
-    | Cnt of 'b * 'b list * ('a, 'b) fmla
-  val fv_fmla: ('a, 'b) fmla -> 'b list
-  val ranf: ('a, 'b) fmla -> bool
-  val string_of_fmla: ('a -> string) -> ('b -> string) -> ('a, 'b) fmla -> string
-  val pp_fmla: ('a -> string) -> ('b -> string) -> ('a, 'b) fmla -> string
-  val ra_of_fmla: ('a -> string) -> ('b -> string) -> ('a, 'b) fmla -> string
-  val agg_of_fo_fmla: ((int, string) fmla -> int) -> (int, string) fmla -> (int, string) fmla
-  val is_srnf: ('a, 'b) fmla -> bool
-  val srnf: ('a, 'b) fmla -> ('a, 'b) fmla
-  val sr: ('a, string) fmla -> bool
-  val evaluable: ('a, string) fmla -> bool
-  val rtrans: ((int, string) fmla -> int) -> (int, string) fmla -> (int, string) fmla * (int, string) fmla
-  val vgtrans: ((int, string) fmla -> int) -> (int, string) fmla -> (int, string) fmla * (int, string) fmla
+    | Eq of string * 'a term
+    | Pred of string * 'a term list
+    | Neg of 'a fmla
+    | Disj of 'a fmla * 'a fmla
+    | Conj of 'a fmla * 'a fmla
+    | Exists of string * 'a fmla
+    | Cnt of string * string list * 'a fmla
+  val fv_fmla: 'a fmla -> string list
+  val ranf: 'a fmla -> bool
+  val string_of_fmla: ('a -> string) -> (string -> string) -> 'a fmla -> string
+  val pp_fmla: ('a -> string) -> (string -> string) -> 'a fmla -> string
+  val ra_of_fmla: ('a -> string) -> (string -> string) -> 'a fmla -> string
+  val agg_of_fmla: ('a fmla -> int) -> 'a fmla -> 'a fmla
+  val is_srnf: 'a fmla -> bool
+  val srnf: 'a fmla -> 'a fmla
+  val sr: 'a fmla -> bool
+  val evaluable: 'a fmla -> bool
+  val rtrans: ('a fmla -> int) -> 'a fmla -> 'a fmla * 'a fmla
+  val vgtrans: ('a fmla -> int) -> 'a fmla -> 'a fmla * 'a fmla
 end = struct
   
-type ('a, 'b) term =
+type 'a term =
     Const of 'a
-  | Var of 'b
-  | Mult of ('a, 'b) term * ('a, 'b) term
-type ('a, 'b) fmla =
+  | Var of string
+  | Mult of 'a term * 'a term
+type 'a fmla =
     False
   | True
-  | Eq of 'b * ('a, 'b) term
-  | Pred of string * ('a, 'b) term list
-  | Neg of ('a, 'b) fmla
-  | Disj of ('a, 'b) fmla * ('a, 'b) fmla
-  | Conj of ('a, 'b) fmla * ('a, 'b) fmla
-  | Exists of 'b * ('a, 'b) fmla
-  | Cnt of 'b * 'b list * ('a, 'b) fmla
+  | Eq of string * 'a term
+  | Pred of string * 'a term list
+  | Neg of 'a fmla
+  | Disj of 'a fmla * 'a fmla
+  | Conj of 'a fmla * 'a fmla
+  | Exists of string * 'a fmla
+  | Cnt of string * string list * 'a fmla
 
 let rec fv_term = function
   | Const n -> []
@@ -452,8 +452,6 @@ let agg2 cost s' vs f' =
     let nps = List.map (fun n -> match n with Neg n' -> sconj (ps @ [n'])) ns in
     disj [sconj (s' @ [Neg exps]); exists [c; c'] (sconj (s' @ Cnt (c, vs, cps) :: Cnt (c', vs, disj nps) :: Eq (c, Var c') :: []))]
 
-let mmap = Hashtbl.create 100000
-
 let drop fs =
   let rec aux f =
     if List.mem f fs then True
@@ -465,7 +463,8 @@ let drop fs =
       | _ -> f)
   in aux
 
-let agg_of_fo_fmla cost f =
+let agg_of_fmla cost f =
+  let mmap = Hashtbl.create 100000 in
   let rec ms f =
     try
       Hashtbl.find mmap f

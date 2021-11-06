@@ -66,22 +66,6 @@ let cost db f =
   (* let _ = Printf.printf "cost: %s\n" (string_of_fmla string_of_int (fun f -> f) f) in *)
   sum (List.map (fun f -> let n = eval f db in (* Printf.printf "  %s: %d\n" (string_of_fmla string_of_int (fun f -> f) f) n; *) n) (List.filter ranf (subs f)))
 
-let rec mfotl_of_fmla =
-  let rec string_of_trm = function
-    | Const n -> string_of_int n
-    | Var v -> "?" ^ v
-    | Mult (t1, t2) -> "(" ^ string_of_trm t1 ^ " * " ^ string_of_trm t2 ^ ")" in
-  let rec aux = function
-  | False -> "FALSE"
-  | True -> "TRUE"
-  | Pred (name, ts) -> name ^ "(" ^ string_of_list (fun t -> match t with Const c -> string_of_int c | Var v -> "?" ^ v) ts ^ ")"
-  | Eq (v, t) -> "?" ^ v ^ " = " ^ string_of_trm t
-  | Neg f -> "NOT (" ^ mfotl_of_fmla f ^ ")"
-  | Conj (f, g) -> "(" ^ mfotl_of_fmla f ^ ") AND (" ^ mfotl_of_fmla g ^ ")"
-  | Disj (f, g) -> "(" ^ mfotl_of_fmla f ^ ") OR (" ^ mfotl_of_fmla g ^ ")"
-  | Exists (v, f) -> "EXISTS ?" ^ v ^ ". " ^ mfotl_of_fmla f in
-  aux
-
 let sdump prefix sfin sinf =
   let _ =
       (let ch = open_out (prefix ^ "sfin") in
@@ -136,7 +120,7 @@ let rtrans prefix tdb (*db *)f =
   let _ = assert (ranf sfin) in
   let _ = assert (ranf sinf) in
   let _ = sdump prefix sfin sinf in
-  let (afin, ainf) = (agg_of_fo_fmla (cost tdb) sfin, agg_of_fo_fmla (cost tdb) sinf) in
+  let (afin, ainf) = (agg_of_fmla (cost tdb) sfin, agg_of_fmla (cost tdb) sinf) in
   let _ = assert (is_srnf afin) in
   let _ = assert (is_srnf ainf) in
   let _ = assert (ranf afin) in
@@ -164,7 +148,7 @@ let vgtrans prefix tdb (*db *)f =
   let _ = assert (ranf vsfin) in
   let _ = assert (ranf vsinf) in
   let _ = sdump prefix vsfin vsinf in
-  let (vafin, vainf) = (agg_of_fo_fmla (cost tdb) vsfin, agg_of_fo_fmla (cost tdb) vsinf) in
+  let (vafin, vainf) = (agg_of_fmla (cost tdb) vsfin, agg_of_fmla (cost tdb) vsinf) in
   let _ = assert (is_srnf vafin) in
   let _ = assert (is_srnf vainf) in
   let _ = assert (ranf vafin) in
