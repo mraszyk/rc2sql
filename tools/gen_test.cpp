@@ -129,7 +129,12 @@ fo *random(int n, int maxn, int nfv, int fvgen, int mode, int seed) {
     int next = 0;
     vector<pair<int, vector<int> > > db;
     gend.seed(seed);
-    c = fmla->dg(nfv, gen_rand(1, nfv, fmla->evar(1), &next), gen_rand(1, nfv, fmla->evar(0), &next), db, &next, gend, mode);
+    c = fmla->dg(nfv, gen_rand(1, nfv, fmla->evar(1), &next), gen_rand(1, nfv, fmla->evar(0), &next), db, &next, gend, 0);
+    if (c == 1) {
+      db.clear();
+      gend.seed(seed);
+      c = fmla->dg(nfv, gen_rand(1, nfv, fmla->evar(1), &next), gen_rand(1, nfv, fmla->evar(0), &next), db, &next, gend, 1);
+    }
   } while (!(c == 1 && check_dg(fmla, nfv, fvgen, maxn, b)));
   return fmla;
 }

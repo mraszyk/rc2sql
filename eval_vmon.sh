@@ -10,6 +10,4 @@ cat "${ABS}.db" >> "${ABS}.log"
 . /home/rcsql/functions.sh
 symlinks "${ABS}"
 
-/home/rcsql/radb.sh "${ABS}"
-
 /home/rcsql/run_vmon.sh "${ABS}.a"

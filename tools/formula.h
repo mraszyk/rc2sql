@@ -102,6 +102,7 @@ struct fo {
     virtual bool gen_ex() const = 0;
     virtual bool con_ex() const = 0;
     virtual bool srnf(int par) = 0;
+    virtual bool ranf(set<int> gv) = 0;
     virtual bool no_closed() const = 0;
     bool check_dupl() const {
       auto eqs = col_eqs();
@@ -151,6 +152,9 @@ struct fo_pred : public fo {
       return true;
     }
     bool srnf(int par) override {
+      return true;
+    }
+    bool ranf(set<int> gv) override {
       return true;
     }
     bool no_closed() const {
@@ -238,6 +242,9 @@ struct fo_eq : public fo {
     bool srnf(int par) override {
       return true;
     }
+    bool ranf(set<int> gv) override {
+      return !t.first || in_set(gv, x) || in_set(gv, t.second);
+    }
     bool no_closed() const {
       return true;
     }
@@ -304,6 +311,9 @@ struct fo_neg : public fo {
     bool srnf(int par) override {
       return par != NEG && sub->srnf(NEG);
     }
+    bool ranf(set<int> gv) override {
+      return sub->ranf(set<int>()) && is_subset(fv, gv);
+    }
     bool no_closed() const {
       return sub->no_closed();
     }
@@ -365,6 +375,9 @@ struct fo_conj : public fo {
     }
     bool srnf(int par) override {
       return par != NEG && subl->srnf(BIN) && subr->srnf(BIN);
+    }
+    bool ranf(set<int> gv) override {
+      return subl->ranf(set<int>()) && subr->ranf(subl->fv);
     }
     bool no_closed() const {
       return subl->no_closed() && subr->no_closed();
@@ -451,6 +464,9 @@ struct fo_disj : public fo {
     bool srnf(int par) override {
       return par != NEG && par != EX && subl->srnf(BIN) && subr->srnf(BIN);
     }
+    bool ranf(set<int> gv) override {
+      return subl->ranf(set<int>()) && subr->ranf(set<int>()) && is_subset(subl->fv, subr->fv) && is_subset(subr->fv, subl->fv);
+    }
     bool no_closed() const {
       return subl->no_closed() && subr->no_closed();
     }
@@ -527,6 +543,9 @@ struct fo_ex : public fo {
     }
     bool srnf(int par) override {
       return in_set(sub->fv, var) && sub->srnf(EX);
+    }
+    bool ranf(set<int> gv) override {
+      return sub->ranf(set<int>());
     }
     bool no_closed() const {
       return !fv.empty() && sub->no_closed();

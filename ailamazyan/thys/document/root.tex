@@ -24,32 +24,28 @@
 \begin{abstract}
 We formalize first-order query evaluation over an infinite domain with equality.
 We first define the syntax and semantics of first-order logic with equality.
-Next we define a locale $\mathit{eval\_fo}$ abstracting a representation of
-a potentially infinite set of tuples satisfying a first-order query
-over finite relations.
-Inside the locale, we define a function $\mathit{eval}$ checking
-if the set of tuples satisfying a first-order query over a database
-(an interpretation of the query's predicates) is finite
-(i.e., deciding \emph{relative safety})
-and computing the set of satisfying tuples if it is finite.
-Altogether the function $\mathit{eval}$ solves
-\emph{capturability}~\cite{DBLP:conf/lics/AvronH91}
-of first-order logic with equality.
-We also use the function $\mathit{eval}$ to prove a code equation
-for the semantics of first-order logic, i.e.,
-the function checking if a first-order query over a database
-is satisfied by a variable assignment.
+Next we define a locale $\mathit{eval\_fo}$ abstracting a representation of a
+potentially infinite set of tuples satisfying a first-order query over finite
+relations. Inside the locale, we define a function $\mathit{eval}$ checking if
+the set of tuples satisfying a first-order query over a database
+(an interpretation of the query's predicates) is finite (i.e., deciding
+\emph{relative safety}) and computing the set of satisfying tuples if it is
+finite. Altogether the function $\mathit{eval}$ solves
+\emph{capturability}~\cite{DBLP:conf/lics/AvronH91} of first-order logic with
+equality. We also use the function $\mathit{eval}$ to prove a code equation for
+the semantics of first-order logic, i.e., the function checking if a first-order
+query over a database is satisfied by a variable assignment.
 
-We provide an interpretation of the locale $\mathit{eval\_fo}$
-based on the approach by Ailamazyan et al.~\cite{AGSS86}.
-A core notion in the interpretation is the active domain of a query and
-a database that contains all domain elements occurring in the query
-and the database.
-Our interpretation yields an \emph{executable} function $\mathit{eval}$.
-%The time complexity of $\mathit{eval}$ on a query is linear in the number of
-%satisfying tuples for all the subqueries.
-%We remark that this time complexity is nontrivial to achieve for conjunctions.
-Finally, we export code for the infinite domain of natural numbers.
+We provide an interpretation of the locale $\mathit{eval\_fo}$ based on the
+approach by Ailamazyan et al.~\cite{AGSS86}. A core notion in the interpretation
+is the active domain of a query and a database that contains all domain elements
+occurring in the query and the database. Our interpretation yields an
+\emph{executable} function $\mathit{eval}$. The time complexity of
+$\mathit{eval}$ on a query is linear in the total number of tuples in the
+intermediate relations for the subqueries. Specifically, we build a database
+index to evaluate a conjunction. We also optimize the intermediate relation for
+a negated subquery in a conjunction. Finally, we export code for the infinite
+domain of natural numbers.
 \end{abstract}
 
 \tableofcontents

@@ -12,9 +12,11 @@ The choice of a training database does NOT impact the translation's correctness.
 VGTrans is our implementation of the translation by Van Gelder & Topor.
 VGTrans has the same interface as RC2SQL.
 
-This repository is the supplementary material for the submitted paper
+This repository is the supplementary material for the paper
 
 Practical Relational Calculus Query Evaluation
+
+accepted at ICDT'22.
 
 ---
 

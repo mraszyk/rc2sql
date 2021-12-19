@@ -204,7 +204,7 @@ let rec cp = function
   | Exists (v, f) -> (match cp f with
       False -> False
     | True -> True
-    | f' -> Exists (v, f'))
+    | f' -> if List.mem v (fv_fmla f') then Exists (v, f') else f')
   | Cnt (c, vs, f) -> (match cp f with
       False -> False
     | f' -> Cnt (c, vs, f'))

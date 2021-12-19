@@ -1,5 +1,5 @@
 theory Cluster
-  imports "Containers.Mapping_Impl"
+  imports Mapping_Code
 begin
 
 lemma these_Un[simp]: "Option.these (A \<union> B) = Option.these A \<union> Option.these B"
@@ -16,6 +16,12 @@ lemma these_imageI: "f x = Some y \<Longrightarrow> x \<in> X \<Longrightarrow> 
 
 lift_definition cluster :: "('b \<Rightarrow> 'a option) \<Rightarrow> 'b set \<Rightarrow> ('a, 'b set) mapping" is
   "\<lambda>f Y x. if Some x \<in> f ` Y then Some {y \<in> Y. f y = Some x} else None" .
+
+lemma set_of_idx_cluster: "set_of_idx (cluster (Some \<circ> f) X) = X"
+  by transfer (auto simp: ran_def)
+
+lemma lookup_cluster': "Mapping.lookup (cluster (Some \<circ> h) X) y = (if y \<notin> h ` X then None else Some {x \<in> X. h x = y})"
+  by transfer auto
 
 context ord
 begin

@@ -1737,6 +1737,10 @@ lemma fo_nmlz_eqD:
   using ad_agr_list_trans[OF fo_nmlz_ad_agr[of AD vs, unfolded assms]
         ad_agr_list_comm[OF fo_nmlz_ad_agr[of AD vs']]] .
 
+lemma fo_nmlz_eq: "fo_nmlz AD vs = fo_nmlz AD vs' \<longleftrightarrow> ad_agr_list AD vs vs'"
+  using fo_nmlz_eqI[where ?AD=AD] fo_nmlz_eqD[where ?AD=AD]
+  by blast
+
 lemma fo_nmlz_mono:
   assumes "AD \<subseteq> AD'" "Inl -` set xs \<subseteq> AD"
   shows "fo_nmlz AD' xs = fo_nmlz AD xs"
@@ -1895,6 +1899,18 @@ proof -
     by (smt assms(1) disj length_map map_fst_zip map_snd_zip sd_ns')
 qed
 
+lemma proj_tuple_length:
+  assumes "sorted_distinct ns" "sorted_distinct ms" "set ns \<subseteq> set ms" "length ms = length xs"
+  shows "length (proj_tuple ns (zip ms xs)) = length ns"
+proof -
+  obtain \<sigma> where \<sigma>: "xs = map \<sigma> ms"
+    using exists_map[OF assms(4)] assms(2)
+    by auto
+  show ?thesis
+    unfolding \<sigma>
+    by (auto simp: proj_tuple_map[OF assms(1-3)])
+qed
+
 lemma ext_tuple_sound:
   assumes "sorted_distinct fv_sub" "sorted_distinct fv_sub_comp" "sorted_distinct fv_all"
     "set fv_sub \<inter> set fv_sub_comp = {}" "set fv_sub \<union> set fv_sub_comp = set fv_all"
@@ -2051,6 +2067,12 @@ proof -
 qed
 
 definition "ext_tuple_set AD ns ns' X = (if ns' = [] then X else fo_nmlz AD ` \<Union>(ext_tuple AD ns ns' ` X))"
+
+lemma ext_tuple_set_eq: "Ball X (fo_nmlzd AD) \<Longrightarrow> ext_tuple_set AD ns ns' X = fo_nmlz AD ` \<Union>(ext_tuple AD ns ns' ` X)"
+  by (auto simp: ext_tuple_set_def ext_tuple_def fo_nmlzd_code)
+
+lemma ext_tuple_set_mono: "A \<subseteq> B \<Longrightarrow> ext_tuple_set AD ns ns' A \<subseteq> ext_tuple_set AD ns ns' B"
+  by (auto simp: ext_tuple_set_def)
 
 lemma ext_tuple_correct:
   assumes "sorted_distinct fv_sub" "sorted_distinct fv_sub_comp" "sorted_distinct fv_all"
@@ -2519,55 +2541,66 @@ lemma ad_agr_close_empty: "fo_nmlzd X xs \<Longrightarrow> ad_agr_close {} xs = 
     ad_agr_close_sound[where ?X=X and ?Y="{}" and ?xs=xs] ad_agr_list_refl ad_agr_list_fo_nmlzd
   by fastforce
 
-lemma ad_agr_close_correct:
-  assumes "AD' \<subseteq> AD"
-  "\<And>\<sigma> \<tau>. ad_agr_sets (set (fv_fo_fmla_list \<phi>)) (set (fv_fo_fmla_list \<phi>)) AD' \<sigma> \<tau> \<Longrightarrow>
-    \<sigma> \<in> R \<longleftrightarrow> \<tau> \<in> R"
-  shows "\<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_fmla \<phi> R) = fo_nmlz AD ` proj_fmla \<phi> R"
+lemma ad_agr_close_set_correct:
+  assumes "AD' \<subseteq> AD" "sorted_distinct ns"
+  "\<And>\<sigma> \<tau>. ad_agr_sets (set ns) (set ns) AD' \<sigma> \<tau> \<Longrightarrow> \<sigma> \<in> R \<longleftrightarrow> \<tau> \<in> R"
+  shows "\<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_vals R ns) = fo_nmlz AD ` proj_vals R ns"
 proof (rule set_eqI, rule iffI)
   fix vs
-  assume "vs \<in> \<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_fmla \<phi> R)"
-  then obtain \<sigma> where \<sigma>_def: "vs \<in> ad_agr_close (AD - AD')
-    (fo_nmlz AD' (map \<sigma> (fv_fo_fmla_list \<phi>)))" "\<sigma> \<in> R"
-    by (auto simp: proj_fmla_map)
-  have vs: "fo_nmlzd AD vs" "ad_agr_list AD' (fo_nmlz AD' (map \<sigma> (fv_fo_fmla_list \<phi>))) vs"
+  assume "vs \<in> \<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_vals R ns)"
+  then obtain \<sigma> where \<sigma>_def: "vs \<in> ad_agr_close (AD - AD') (fo_nmlz AD' (map \<sigma> ns))" "\<sigma> \<in> R"
+    by (auto simp: proj_vals_def)
+  have vs: "fo_nmlzd AD vs" "ad_agr_list AD' (fo_nmlz AD' (map \<sigma> ns)) vs"
     using ad_agr_close_sound[OF \<sigma>_def(1) fo_nmlz_sound] assms(1) Diff_partition
     by fastforce+
-  obtain \<tau> where \<tau>_def: "vs = map \<tau> (fv_fo_fmla_list \<phi>)"
-    using exists_map[of "fv_fo_fmla_list \<phi>" vs] sorted_distinct_fv_list vs(2)
+  obtain \<tau> where \<tau>_def: "vs = map \<tau> ns"
+    using exists_map[of ns vs] assms(2) vs(2)
     by (auto simp: ad_agr_list_def fo_nmlz_length)
-  show "vs \<in> fo_nmlz AD ` proj_fmla \<phi> R"
+  show "vs \<in> fo_nmlz AD ` proj_vals R ns"
     apply (subst fo_nmlz_idem[OF vs(1), symmetric])
-    using iffD1[OF assms(2) \<sigma>_def(2), OF iffD2[OF ad_agr_list_link ad_agr_list_trans[OF
-          fo_nmlz_ad_agr[of AD' "map \<sigma> (fv_fo_fmla_list \<phi>)"] vs(2), unfolded \<tau>_def]]]
+    using iffD1[OF assms(3) \<sigma>_def(2), OF iffD2[OF ad_agr_list_link ad_agr_list_trans[OF
+          fo_nmlz_ad_agr[of AD' "map \<sigma> ns"] vs(2), unfolded \<tau>_def]]]
     unfolding \<tau>_def
-    by (auto simp: proj_fmla_map)
+    by (auto simp: proj_vals_def)
 next
   fix vs
-  assume "vs \<in> fo_nmlz AD ` proj_fmla \<phi> R"
-  then obtain \<sigma> where \<sigma>_def: "vs = fo_nmlz AD (map \<sigma> (fv_fo_fmla_list \<phi>))" "\<sigma> \<in> R"
-    by (auto simp: proj_fmla_map)
+  assume "vs \<in> fo_nmlz AD ` proj_vals R ns"
+  then obtain \<sigma> where \<sigma>_def: "vs = fo_nmlz AD (map \<sigma> ns)" "\<sigma> \<in> R"
+    by (auto simp: proj_vals_def)
   define xs where "xs = fo_nmlz AD' vs"
   have preds: "AD' \<inter> (AD - AD') = {}" "fo_nmlzd AD' xs" "fo_nmlzd (AD' \<union> (AD - AD')) vs"
     using assms(1) fo_nmlz_sound Diff_partition
     by (fastforce simp: \<sigma>_def(1) xs_def)+
-  obtain \<tau> where \<tau>_def: "vs = map \<tau> (fv_fo_fmla_list \<phi>)"
-    using exists_map[of "fv_fo_fmla_list \<phi>" vs] sorted_distinct_fv_list \<sigma>_def(1)
+  obtain \<tau> where \<tau>_def: "vs = map \<tau> ns"
+    using exists_map[of "ns" vs] assms(2) \<sigma>_def(1)
     by (auto simp: fo_nmlz_length)
   have "vs \<in> ad_agr_close (AD - AD') xs"
     using ad_agr_close_complete[OF preds] ad_agr_list_comm[OF fo_nmlz_ad_agr]
     by (auto simp: xs_def)
-  then show "vs \<in> \<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_fmla \<phi> R)"
+  then show "vs \<in> \<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_vals R ns)"
     unfolding xs_def \<tau>_def
-    using iffD1[OF assms(2) \<sigma>_def(2), OF ad_agr_sets_mono[OF assms(1) iffD2[OF ad_agr_list_link
-          fo_nmlz_ad_agr[of AD "map \<sigma> (fv_fo_fmla_list \<phi>)", folded \<sigma>_def(1), unfolded \<tau>_def]]]]
-    by (auto simp: proj_fmla_map)
+    using iffD1[OF assms(3) \<sigma>_def(2), OF ad_agr_sets_mono[OF assms(1) iffD2[OF ad_agr_list_link
+          fo_nmlz_ad_agr[of AD "map \<sigma> ns", folded \<sigma>_def(1), unfolded \<tau>_def]]]]
+    by (auto simp: proj_vals_def)
 qed
+
+lemma ad_agr_close_correct:
+  assumes "AD' \<subseteq> AD"
+    "\<And>\<sigma> \<tau>. ad_agr_sets (set (fv_fo_fmla_list \<phi>)) (set (fv_fo_fmla_list \<phi>)) AD' \<sigma> \<tau> \<Longrightarrow>
+    \<sigma> \<in> R \<longleftrightarrow> \<tau> \<in> R"
+  shows "\<Union>(ad_agr_close (AD - AD') ` fo_nmlz AD' ` proj_fmla \<phi> R) = fo_nmlz AD ` proj_fmla \<phi> R"
+  using ad_agr_close_set_correct[OF _ sorted_distinct_fv_list, OF assms]
+  by (auto simp: proj_fmla_def)
 
 definition "ad_agr_close_set AD X = (if Set.is_empty AD then X else \<Union>(ad_agr_close AD ` X))"
 
 lemma ad_agr_close_set_eq: "Ball X (fo_nmlzd AD') \<Longrightarrow> ad_agr_close_set AD X = \<Union>(ad_agr_close AD ` X)"
   by (force simp: ad_agr_close_set_def Set.is_empty_def ad_agr_close_empty)
+
+lemma Ball_fo_nmlzd: "Ball (fo_nmlz AD ` X) (fo_nmlzd AD)"
+  by (auto simp: fo_nmlz_sound)
+
+lemmas ad_agr_close_set_nmlz_eq = ad_agr_close_set_eq[OF Ball_fo_nmlzd]
 
 definition eval_pred :: "('a fo_term) list \<Rightarrow> 'a table \<Rightarrow> ('a, 'c) fo_t" where
   "eval_pred ts X = (let AD = \<Union>(set (map set_fo_term ts)) \<union> \<Union>(set ` X) in
@@ -2599,32 +2632,24 @@ definition "eval_conj_tuple AD ns\<phi> ns\<psi> xs ys =
 
 definition "eval_conj_set AD ns\<phi> X\<phi> ns\<psi> X\<psi> = \<Union>((\<lambda>xs. \<Union>(eval_conj_tuple AD ns\<phi> ns\<psi> xs ` X\<psi>)) ` X\<phi>)"
 
-fun eval_conj_table :: "nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow> nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow>
-  ('a, nat) fo_t" where
-  "eval_conj_table ns\<phi> (AD\<phi>, _, X\<phi>) ns\<psi> (AD\<psi>, _, X\<psi>) = (let AD = AD\<phi> \<union> AD\<psi>; AD\<Delta>\<phi> = AD - AD\<phi>; AD\<Delta>\<psi> = AD - AD\<psi> in
-    (AD, card (set ns\<phi> \<union> set ns\<psi>), eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> X\<psi>)))"
+definition "idx_join AD ns ns\<phi> X\<phi> ns\<psi> X\<psi> =
+  (let idx\<phi>' = cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD (proj_tuple ns (zip ns\<phi> xs)))) X\<phi>;
+  idx\<psi>' = cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD (proj_tuple ns (zip ns\<psi> ys)))) X\<psi> in
+  set_of_idx (mapping_join (\<lambda>X\<phi>'' X\<psi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi> X\<psi>'') idx\<phi>' idx\<psi>'))"
 
-fun eval_conj_idx :: "nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow> nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow>
+fun eval_conj :: "nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow> nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow>
   ('a, nat) fo_t" where
-  "eval_conj_idx ns\<phi> (AD\<phi>, _, X\<phi>) ns\<psi> (AD\<psi>, _, X\<psi>) = (let AD = AD\<phi> \<union> AD\<psi>; AD' = AD\<phi> \<inter> AD\<psi>;
-    AD\<Delta>\<phi> = AD - AD\<phi>; AD\<Delta>\<psi> = AD - AD\<psi>;
-    ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>;
-    idx\<phi> = cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD' (proj_tuple ns (zip ns\<phi> xs)))) X\<phi>;
-    idx\<psi> = cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD' (proj_tuple ns (zip ns\<psi> ys)))) X\<psi>;
-    join = mapping_join (\<lambda>X\<phi>' X\<psi>'.
-      let idx\<phi>' = cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD (proj_tuple ns (zip ns\<phi> xs)))) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>');
-      idx\<psi>' = cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD (proj_tuple ns (zip ns\<psi> ys)))) (ad_agr_close_set AD\<Delta>\<psi> X\<psi>') in
-      set_of_idx (mapping_join (\<lambda>X\<phi>'' X\<psi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi> X\<psi>'') idx\<phi>' idx\<psi>')) idx\<phi> idx\<psi> in
-    (AD, card (set ns\<phi> \<union> set ns\<psi>), set_of_idx join))"
+  "eval_conj ns\<phi> (AD\<phi>, _, X\<phi>) ns\<psi> (AD\<psi>, _, X\<psi>) = (let AD = AD\<phi> \<union> AD\<psi>; AD\<Delta>\<phi> = AD - AD\<phi>; AD\<Delta>\<psi> = AD - AD\<psi>; ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi> in
+    (AD, card (set ns\<phi> \<union> set ns\<psi>), idx_join AD ns ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> X\<psi>)))"
 
 fun eval_ajoin :: "nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow> nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow>
   ('a, nat) fo_t" where
-  "eval_ajoin ns\<phi> (AD\<phi>, _, X\<phi>) ns\<psi> (AD\<psi>, _, X\<psi>) = (let AD = AD\<phi> \<union> AD\<psi>;
-    ns\<phi>' = filter (\<lambda>n. n \<notin> set ns\<phi>) ns\<psi>;
-    ns = remdups_adj (sort (ns\<phi> @ ns\<psi>));
-    AD\<Delta>\<phi> = AD - AD\<phi>;
-    X\<phi>' = ext_tuple_set AD ns\<phi> ns\<phi>' (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) in
-    (AD, card (set ns\<phi> \<union> set ns\<psi>), {xs \<in> X\<phi>'. \<not>fo_nmlz AD\<psi> (proj_tuple ns\<psi> (zip ns xs)) \<in> X\<psi>}))"
+  "eval_ajoin ns\<phi> (AD\<phi>, _, X\<phi>) ns\<psi> (AD\<psi>, _, X\<psi>) = (let AD = AD\<phi> \<union> AD\<psi>; AD\<Delta>\<phi> = AD - AD\<phi>; AD\<Delta>\<psi> = AD - AD\<psi>;
+    ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>; ns\<phi>' = filter (\<lambda>n. n \<notin> set ns\<phi>) ns\<psi>;
+    idx\<phi> = cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> xs)))) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>);
+    idx\<psi> = cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<psi> ys)))) X\<psi> in
+    (AD, card (set ns\<phi> \<union> set ns\<psi>), set_of_idx (Mapping.map_values (\<lambda>xs X. case Mapping.lookup idx\<psi> xs of Some Y \<Rightarrow>
+      idx_join AD ns ns\<phi> X ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {xs} - Y)) | _ \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' X) idx\<phi>)))"
 
 fun eval_disj :: "nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow> nat list \<Rightarrow> ('a, nat) fo_t \<Rightarrow>
   ('a, nat) fo_t" where
@@ -4252,15 +4277,6 @@ qed
 
 definition "cross_with f t t' = \<Union>((\<lambda>xs. \<Union>(f xs ` t')) ` t)"
 
-lemma mapping_join_cong:
-  assumes "\<And>X X'. X \<subseteq> set_of_idx t \<Longrightarrow> X' \<subseteq> set_of_idx t' \<Longrightarrow> f X X' = f' X X'"
-  shows "mapping_join f t t' = mapping_join f' t t'"
-  using assms
-  apply transfer
-  apply (rule ext)
-  apply (auto simp: ran_def split: option.splits)
-  done
-
 lemma mapping_join_cross_with:
   assumes "\<And>x x'. x \<in> t \<Longrightarrow> x' \<in> t' \<Longrightarrow> h x \<noteq> h' x' \<Longrightarrow> f x x' = {}"
   shows "set_of_idx (mapping_join (cross_with f) (cluster (Some \<circ> h) t) (cluster (Some \<circ> h') t')) = cross_with f t t'"
@@ -4294,94 +4310,27 @@ qed
 lemma fo_nmlzd_mono_sub: "X \<subseteq> X' \<Longrightarrow> fo_nmlzd X xs \<Longrightarrow> fo_nmlzd X' xs"
   by (meson fo_nmlzd_def order_trans)
 
-lemma set_of_idx_cluster: "set_of_idx (cluster (Some \<circ> f) X) = X"
-  by transfer (auto simp: ran_def)
-
-lemma eval_conj_idx: assumes wf: "fo_wf \<phi> I t\<phi>" "fo_wf \<psi> I t\<psi>"
-  shows "eval_conj_table (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> =
-    eval_conj_idx (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>"
+lemma idx_join:
+  assumes X\<phi>_props: "\<And>vs. vs \<in> X\<phi> \<Longrightarrow> fo_nmlzd AD vs \<and> length vs = length ns\<phi>"
+  assumes X\<psi>_props: "\<And>vs. vs \<in> X\<psi> \<Longrightarrow> fo_nmlzd AD vs \<and> length vs = length ns\<psi>"
+  assumes sd_ns: "sorted_distinct ns\<phi>" "sorted_distinct ns\<psi>"
+  assumes ns_def: "ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>"
+  shows "idx_join AD ns ns\<phi> X\<phi> ns\<psi> X\<psi> = eval_conj_set AD ns\<phi> X\<phi> ns\<psi> X\<psi>"
 proof -
-  obtain AD\<phi> n\<phi> X\<phi> where t\<phi>_def: "t\<phi> = (AD\<phi>, n\<phi>, X\<phi>)"
-    by (cases t\<phi>) auto
-  obtain AD\<psi> n\<psi> X\<psi> where t\<psi>_def: "t\<psi> = (AD\<psi>, n\<psi>, X\<psi>)"
-    by (cases t\<psi>) auto
-  define AD where "AD = AD\<phi> \<union> AD\<psi>"
-  define AD\<Delta>\<phi> where "AD\<Delta>\<phi> = AD - AD\<phi>"
-  define AD\<Delta>\<psi> where "AD\<Delta>\<psi> = AD - AD\<psi>"
-  define ns\<phi> where "ns\<phi> = fv_fo_fmla_list \<phi>"
-  define ns\<psi> where "ns\<psi> = fv_fo_fmla_list \<psi>"
-  define ns where "ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>"
-  have AD_sub: "AD\<phi> \<subseteq> AD" "AD\<psi> \<subseteq> AD"
-    by (auto simp: AD_def)
-  have AD_disj: "AD\<phi> \<inter> AD\<Delta>\<phi> = {}" "AD\<psi> \<inter> AD\<Delta>\<psi> = {}"
-    by (auto simp: AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def)
-  have AD_delta: "AD = AD\<phi> \<union> AD\<Delta>\<phi>" "AD = AD\<psi> \<union> AD\<Delta>\<psi>"
-    by (auto simp: AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def AD_def)
-  have sd_ns: "sorted_distinct ns\<phi>" "sorted_distinct ns\<psi>"
-    by (auto simp: ns\<phi>_def ns\<psi>_def sorted_distinct_fv_list)
-  have X\<phi>_props: "fo_nmlzd AD\<phi> vs" "length vs = length ns\<phi>" if "vs \<in> X\<phi>" for vs
-    using wf(1) that
-    by (auto simp: t\<phi>_def nfv_def ns\<phi>_def)
-  have X\<psi>_props: "fo_nmlzd AD\<psi> vs" "length vs = length ns\<psi>" if "vs \<in> X\<psi>" for vs
-    using wf(2) that
-    by (auto simp: t\<psi>_def nfv_def ns\<psi>_def)
-  have fo_nmlzd_X: "Ball X\<phi> (fo_nmlzd AD\<phi>)" "Ball X\<psi> (fo_nmlzd AD\<psi>)"
-    using wf
-    by (auto simp: t\<phi>_def t\<psi>_def)
-  have cross_eval_conj_tuple: "(\<lambda>X\<phi>'' X\<psi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi> X\<psi>'') = cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>)" for AD :: "'a set" and ns\<phi> ns\<psi>
-    by (rule ext)+ (auto simp: eval_conj_set_def cross_with_def)
-  have empty_delta: "Set.is_empty AD\<Delta>\<phi> \<Longrightarrow> AD = AD\<phi>" "Set.is_empty AD\<Delta>\<psi> \<Longrightarrow> AD = AD\<psi>"
-    by (auto simp: AD_def AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def Set.is_empty_def)
-  have ect_empty: "x \<in> ad_agr_close_set AD\<Delta>\<phi> X\<phi>' \<Longrightarrow> x' \<in> ad_agr_close_set AD\<Delta>\<psi> X\<psi>' \<Longrightarrow> fo_nmlz AD (proj_tuple ns (zip ns\<phi> x)) \<noteq> fo_nmlz AD (proj_tuple ns (zip ns\<psi> x')) \<Longrightarrow>
+  have ect_empty: "x \<in> X\<phi> \<Longrightarrow> x' \<in> X\<psi> \<Longrightarrow> fo_nmlz AD (proj_tuple ns (zip ns\<phi> x)) \<noteq> fo_nmlz AD (proj_tuple ns (zip ns\<psi> x')) \<Longrightarrow>
     eval_conj_tuple AD ns\<phi> ns\<psi> x x' = {}"
     if "X\<phi>' \<subseteq> X\<phi>" "X\<psi>' \<subseteq> X\<psi>" for X\<phi>' X\<psi>' and x x'
     apply (rule eval_conj_tuple_empty[where ?ns="filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>"])
-    using X\<phi>_props X\<psi>_props that fo_nmlzd_mono_sub[OF AD_sub(1)] sd_ns
-      fo_nmlzd_mono_sub[OF AD_sub(1)] fo_nmlzd_mono_sub[OF AD_sub(2)]
-      ad_agr_close_sound[OF _ _ AD_disj(1), folded AD_delta]
-      ad_agr_close_sound[OF _ _ AD_disj(2), folded AD_delta]
-    by (auto simp: ns_def ad_agr_close_set_def split: if_splits) (smt (z3) ad_agr_list_length subsetD)+
-  have inner_cong: "(\<lambda>X\<phi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi>) = (cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>))"
+    using X\<phi>_props X\<psi>_props that sd_ns
+    by (auto simp: ns_def ad_agr_close_set_def split: if_splits)
+  have cross_eval_conj_tuple: "(\<lambda>X\<phi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi>) = cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>)" for AD :: "'a set" and ns\<phi> ns\<psi>
     by (rule ext)+ (auto simp: eval_conj_set_def cross_with_def)
-  have inner_cross: "set_of_idx (mapping_join (\<lambda>X\<phi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi>)
-      (cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD (proj_tuple ns (zip ns\<phi> xs)))) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>'))
-      (cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD (proj_tuple ns (zip ns\<psi> ys)))) (ad_agr_close_set AD\<Delta>\<psi> X\<psi>'))) =
-    cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>') (ad_agr_close_set AD\<Delta>\<psi> X\<psi>')"
-    if sub: "X\<phi>' \<subseteq> X\<phi>" "X\<psi>' \<subseteq> X\<psi>" for X\<phi>' X\<psi>'
-    using mapping_join_cross_with[where ?f="eval_conj_tuple AD ns\<phi> ns\<psi>"
-        and ?h="\<lambda>xs. fo_nmlz AD (proj_tuple ns (zip ns\<phi> xs))"
-        and ?h'="\<lambda>ys. fo_nmlz AD (proj_tuple ns (zip ns\<psi> ys))"
-        and ?t="ad_agr_close_set AD\<Delta>\<phi> X\<phi>'" and ?t'="ad_agr_close_set AD\<Delta>\<psi> X\<psi>'", OF ect_empty[OF sub]]
-    by (auto simp: inner_cong)
-  have aux: "cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>') (ad_agr_close_set AD\<Delta>\<psi> X\<psi>') =
-    cross_with (\<lambda>xs ys. eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> {xs}) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> {ys})) X\<phi>' X\<psi>'"
-    for X\<phi>' X\<psi>'
-    by (auto simp: cross_with_def eval_conj_set_def ad_agr_close_set_def)
-  have outer_cong: "mapping_join (\<lambda>X\<phi>' X\<psi>'. set_of_idx (mapping_join (\<lambda>X\<phi>''. eval_conj_set AD ns\<phi> X\<phi>'' ns\<psi>)
-      (cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD (proj_tuple ns (zip ns\<phi> xs)))) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>'))
-      (cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD (proj_tuple ns (zip ns\<psi> ys)))) (ad_agr_close_set AD\<Delta>\<psi> X\<psi>'))))
-    (cluster (Some \<circ> (\<lambda>xs. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<phi> xs)))) X\<phi>)
-    (cluster (Some \<circ> (\<lambda>ys. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<psi> ys)))) X\<psi>) =
-    mapping_join (cross_with (\<lambda>xs ys. eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> {xs}) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> {ys})))
-    (cluster (Some \<circ> (\<lambda>xs. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<phi> xs)))) X\<phi>)
-    (cluster (Some \<circ> (\<lambda>ys. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<psi> ys)))) X\<psi>)"
-    by (rule mapping_join_cong) (auto simp: set_of_idx_cluster inner_cross aux)
-  have fo_nmlzd_x: "x \<in> X\<phi> \<Longrightarrow> Ball {x} (fo_nmlzd AD\<phi>)" "x \<in> X\<psi> \<Longrightarrow> Ball {x} (fo_nmlzd AD\<psi>)" for x
-    using fo_nmlzd_X
-    by (auto)
-  have ect_empty_closed: "eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> {x}) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> {x'}) = {}"
-    if "x \<in> X\<phi>" "x' \<in> X\<psi>" "fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<phi> x)) \<noteq> fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<psi> x'))"
-    for x x'
-    using that fo_nmlzd_x eval_conj_tuple_close_empty[OF _ _ _ _ sd_ns ns_def that(3)] X\<phi>_props X\<psi>_props
-    by (auto simp: eval_conj_set_def AD_def AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def ad_agr_close_set_eq[where ?AD'=AD\<phi>] ad_agr_close_set_eq[where ?AD'=AD\<psi>])
-  note outer_cross = mapping_join_cross_with[where ?f="\<lambda>xs ys. eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> {xs}) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> {ys})"
-      and ?h="\<lambda>xs. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<phi> xs))"
-      and ?h'="\<lambda>ys. fo_nmlz (AD\<phi> \<inter> AD\<psi>) (proj_tuple ns (zip ns\<psi> ys))"
-      and ?t=X\<phi> and ?t'=X\<psi>, OF ect_empty_closed, simplified]
-  show ?thesis
-    by (auto simp: t\<phi>_def t\<psi>_def Let_def AD_def[symmetric] AD\<Delta>\<phi>_def[symmetric] AD\<Delta>\<psi>_def[symmetric]
-        ns\<phi>_def[symmetric] ns\<psi>_def[symmetric] ns_def[symmetric] outer_cong outer_cross)
-       (auto simp: eval_conj_set_def cross_with_def ad_agr_close_set_def split: if_splits)
+  have "idx_join AD ns ns\<phi> X\<phi> ns\<psi> X\<psi> = cross_with (eval_conj_tuple AD ns\<phi> ns\<psi>) X\<phi> X\<psi>"
+    unfolding idx_join_def Let_def cross_eval_conj_tuple
+    by (rule mapping_join_cross_with[OF ect_empty]) auto
+  moreover have "\<dots> = eval_conj_set AD ns\<phi> X\<phi> ns\<psi> X\<psi>"
+    by (auto simp: cross_with_def eval_conj_set_def)
+  finally show ?thesis .
 qed
 
 lemma proj_fmla_conj_sub:
@@ -4413,10 +4362,10 @@ proof (rule subsetI)
     by (auto simp: proj_fmla_map)
 qed
 
-lemma eval_conj_table:
+lemma eval_conj:
   fixes \<phi> :: "('a :: infinite, 'b) fo_fmla"
   assumes wf: "fo_wf \<phi> I t\<phi>" "fo_wf \<psi> I t\<psi>"
-  shows "fo_wf (Conj \<phi> \<psi>) I (eval_conj_table (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>)"
+  shows "fo_wf (Conj \<phi> \<psi>) I (eval_conj (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>)"
 proof -
   obtain AD\<phi> n\<phi> X\<phi> AD\<psi> n\<psi> X\<psi> where ts_def:
     "t\<phi> = (AD\<phi>, n\<phi>, X\<phi>)" "t\<psi> = (AD\<psi>, n\<psi>, X\<psi>)"
@@ -4427,8 +4376,8 @@ proof -
     by (auto simp: ts_def(3,4))
 
   obtain AD n X where AD_X_def:
-    "eval_conj_table (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> = (AD, n, X)"
-    by (cases "eval_conj_table (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>") auto
+    "eval_conj (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> = (AD, n, X)"
+    by (cases "eval_conj (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>") auto
   have AD_def: "AD = act_edom (Conj \<phi> \<psi>) I" "act_edom (Conj \<phi> \<psi>) I \<subseteq> AD"
     "AD\<phi> \<subseteq> AD" "AD\<psi> \<subseteq> AD" "AD = AD\<phi> \<union> AD\<psi>"
     using AD_X_def
@@ -4439,11 +4388,36 @@ proof -
 
   define S\<phi> where "S\<phi> \<equiv> {\<sigma>. esat \<phi> I \<sigma> UNIV}"
   define S\<psi> where "S\<psi> \<equiv> {\<sigma>. esat \<psi> I \<sigma> UNIV}"
+  define AD\<Delta>\<phi> where "AD\<Delta>\<phi> = AD - AD\<phi>"
+  define AD\<Delta>\<psi> where "AD\<Delta>\<psi> = AD - AD\<psi>"
+  define ns\<phi> where "ns\<phi> = fv_fo_fmla_list \<phi>"
+  define ns\<psi> where "ns\<psi> = fv_fo_fmla_list \<psi>"
+  define ns where "ns = filter (\<lambda>n. n \<in> fv_fo_fmla \<phi>) (fv_fo_fmla_list \<psi>)"
   define ns\<phi>' where "ns\<phi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<phi>) (fv_fo_fmla_list \<psi>)"
   define ns\<psi>' where "ns\<psi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<psi>) (fv_fo_fmla_list \<phi>)"
 
   note X\<phi>_def = fo_wf_X[OF wf(1)[unfolded ts_def(1)], unfolded proj_fmla_def, folded S\<phi>_def]
   note X\<psi>_def = fo_wf_X[OF wf(2)[unfolded ts_def(2)], unfolded proj_fmla_def, folded S\<psi>_def]
+
+  have sd_ns: "sorted_distinct ns\<phi>" "sorted_distinct ns\<psi>"
+    by (auto simp: ns\<phi>_def ns\<psi>_def sorted_distinct_fv_list)
+  have ad_agr_X\<phi>: "ad_agr_close_set AD\<Delta>\<phi> X\<phi> = fo_nmlz AD ` proj_vals S\<phi> ns\<phi>"
+    unfolding X\<phi>_def ad_agr_close_set_nmlz_eq ns\<phi>_def[symmetric] AD\<Delta>\<phi>_def
+    apply (rule ad_agr_close_set_correct[OF AD_def(3) sd_ns(1)])
+    using AD_sub(1) esat_UNIV_ad_agr_list
+    by (fastforce simp: ad_agr_list_link S\<phi>_def ns\<phi>_def)
+  have ad_agr_X\<psi>: "ad_agr_close_set AD\<Delta>\<psi> X\<psi> = fo_nmlz AD ` proj_vals S\<psi> ns\<psi>"
+    unfolding X\<psi>_def ad_agr_close_set_nmlz_eq ns\<psi>_def[symmetric] AD\<Delta>\<psi>_def
+    apply (rule ad_agr_close_set_correct[OF AD_def(4) sd_ns(2)])
+    using AD_sub(2) esat_UNIV_ad_agr_list
+    by (fastforce simp: ad_agr_list_link S\<psi>_def ns\<psi>_def)
+
+  have idx_join_eval_conj: "idx_join AD (filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>) ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> X\<psi>) =
+    eval_conj_set AD ns\<phi> (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> X\<psi>)"
+    apply (rule idx_join[OF _ _ sd_ns])
+    unfolding ad_agr_X\<phi> ad_agr_X\<psi>
+    by (auto simp: fo_nmlz_sound fo_nmlz_length proj_vals_def)
+
   have fv_sub: "fv_fo_fmla (Conj \<phi> \<psi>) = fv_fo_fmla \<phi> \<union> set (fv_fo_fmla_list \<psi>)"
     "fv_fo_fmla (Conj \<phi> \<psi>) = fv_fo_fmla \<psi> \<union> set (fv_fo_fmla_list \<phi>)"
     by (auto simp: fv_fo_fmla_list_set)
@@ -4458,11 +4432,11 @@ proof -
   have "X = fo_nmlz AD ` proj_fmla (Conj \<phi> \<psi>) {\<sigma>. esat \<phi> I \<sigma> UNIV} \<inter>
      fo_nmlz AD ` proj_fmla (Conj \<phi> \<psi>) {\<sigma>. esat \<psi> I \<sigma> UNIV}"
     using AD_X_def
-    apply (simp add: ts_def(1,2) Let_def ts_def(3,4)[symmetric] AD_def(5)[symmetric])
+    apply (simp add: ts_def(1,2) Let_def ts_def(3,4)[symmetric] AD_def(5)[symmetric] idx_join_eval_conj[unfolded ns\<phi>_def ns\<psi>_def AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def])
     unfolding eval_conj_set proj_fmla_def
     unfolding res_left_alt(1) res_right_alt(1) S\<phi>_def S\<psi>_def
     by auto
-  then have eval: "eval_conj_table (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> =
+  then have eval: "eval_conj (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> =
     eval_abs (Conj \<phi> \<psi>) I"
     using proj_fmla_conj_sub[OF AD_def(4)[unfolded ts_def(4)], of \<phi>]
     unfolding AD_X_def AD_def(1)[symmetric] n_def eval_abs_def
@@ -4475,140 +4449,461 @@ proof -
     by (auto simp: eval)
 qed
 
-lemma eval_conj:
-  fixes \<phi> :: "('a :: infinite, 'b) fo_fmla"
-  assumes wf: "fo_wf \<phi> I t\<phi>" "fo_wf \<psi> I t\<psi>"
-  shows "fo_wf (Conj \<phi> \<psi>) I (eval_conj_idx (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>)"
-  using eval_conj_table eval_conj_idx assms
-  by metis
+lemma map_values_cluster: "(\<And>w z Z. Z \<subseteq> X \<Longrightarrow> z \<in> Z \<Longrightarrow> w \<in> f (h z) {z} \<Longrightarrow> w \<in> f (h z) Z) \<Longrightarrow>
+  (\<And>w z Z. Z \<subseteq> X \<Longrightarrow> z \<in> Z \<Longrightarrow> w \<in> f (h z) Z \<Longrightarrow> (\<exists>z'\<in>Z. w \<in> f (h z) {z'})) \<Longrightarrow>
+  set_of_idx (Mapping.map_values f (cluster (Some \<circ> h) X)) = \<Union>((\<lambda>x. f (h x) {x}) ` X)"
+  apply transfer
+  apply (auto simp: ran_def)
+   apply (smt (verit, del_insts) mem_Collect_eq subset_eq)
+  apply (smt (z3) imageI mem_Collect_eq subset_iff)
+  done
 
-lemma fo_nmlz_ad_agr_close:
-  assumes AD_sub: "act_edom \<psi> I \<subseteq> AD\<psi>" "AD\<psi> \<subseteq> AD"
-    and S\<psi>_def: "S\<psi> \<equiv> {\<sigma>. esat \<psi> I \<sigma> UNIV}"
-    and X\<psi>_def: "X\<psi> = fo_nmlz AD\<psi> ` proj_vals S\<psi> (fv_fo_fmla_list \<psi>)"
-  shows "fo_nmlz AD xs \<in> ad_agr_close_set (AD - AD\<psi>) X\<psi> \<longleftrightarrow> fo_nmlz AD\<psi> xs \<in> X\<psi>"
-proof (rule iffI)
-  assume "fo_nmlz AD xs \<in> ad_agr_close_set (AD - AD\<psi>) X\<psi>"
-  then obtain ys where ys_def:
-    "ys \<in> proj_vals S\<psi> (fv_fo_fmla_list \<psi>)"
-    "fo_nmlz AD xs \<in> ad_agr_close (AD - AD\<psi>) (fo_nmlz AD\<psi> ys)"
-    using AD_sub(2)
-    by (auto simp: ad_agr_close_set_def X\<psi>_def Set.is_empty_def ad_agr_close_empty[OF fo_nmlz_sound]
-        split: if_splits)
-  have "ad_agr_list AD\<psi> xs (fo_nmlz AD xs)"
-    by (rule ad_agr_list_mono[OF AD_sub(2) fo_nmlz_ad_agr])
-  moreover have "ad_agr_list AD\<psi> (fo_nmlz AD xs) (fo_nmlz AD\<psi> ys)"
-    using ad_agr_list_comm ad_agr_close_sound[OF ys_def(2) fo_nmlz_sound]
-    by auto
-  ultimately have "ad_agr_list AD\<psi> xs (fo_nmlz AD\<psi> ys)"
-    using ad_agr_list_trans
-    by auto
-  then show "fo_nmlz AD\<psi> xs \<in> X\<psi>"
-    using ys_def(1)
-    by (auto simp: X\<psi>_def fo_nmlz_idem[OF fo_nmlz_sound] dest!: fo_nmlz_eqI)
-next
-  assume "fo_nmlz AD\<psi> xs \<in> X\<psi>"
-  then obtain ys where ys_def:
-    "ys \<in> proj_vals S\<psi> (fv_fo_fmla_list \<psi>)"
-    "ad_agr_list AD\<psi> xs ys"
-    by (auto simp: X\<psi>_def dest: fo_nmlz_eqD)
-  have "ad_agr_list AD\<psi> ys (fo_nmlz AD\<psi> ys)"
-    by (rule fo_nmlz_ad_agr)
-  note ad_agr_xs_ys = ad_agr_list_comm[OF ad_agr_list_trans[OF ad_agr_list_comm[OF
-          ad_agr_list_mono[OF AD_sub(2) fo_nmlz_ad_agr]]
-        ad_agr_list_trans[OF ys_def(2) fo_nmlz_ad_agr]]]
-  have "fo_nmlz AD xs \<in> ad_agr_close (AD - AD\<psi>) (fo_nmlz AD\<psi> ys)"
-    using AD_sub ad_agr_close_complete[OF _ _ _ ad_agr_xs_ys]
-    by (auto simp: fo_nmlz_sound sup.absorb2)
-  then show "fo_nmlz AD xs \<in> ad_agr_close_set (AD - AD\<psi>) X\<psi>"
-    using ys_def(1) AD_sub(2)
-    by (auto simp: ad_agr_close_set_def X\<psi>_def Set.is_empty_def ad_agr_close_empty[OF fo_nmlz_sound]
-        split: if_splits)
+lemma fo_nmlz_twice:
+  assumes "sorted_distinct ns" "sorted_distinct ns'" "set ns \<subseteq> set ns'"
+  shows "fo_nmlz AD (proj_tuple ns (zip ns' (fo_nmlz AD (map \<sigma> ns')))) = fo_nmlz AD (map \<sigma> ns)"
+proof -
+  obtain \<sigma>' where \<sigma>': "fo_nmlz AD (map \<sigma> ns') = map \<sigma>' ns'"
+    using exists_map[where ?ys="fo_nmlz AD (map \<sigma> ns')" and ?xs=ns'] assms
+    by (auto simp: fo_nmlz_length)
+  have proj: "proj_tuple ns (zip ns' (map \<sigma>' ns')) = map \<sigma>' ns"
+    by (rule proj_tuple_map[OF assms])
+  show ?thesis
+    unfolding \<sigma>' proj
+    apply (rule fo_nmlz_eqI)
+    using \<sigma>'
+    by (metis ad_agr_list_comm ad_agr_list_subset assms(3) fo_nmlz_ad_agr)
 qed
+
+lemma map_values_cong:
+  assumes "\<And>x y. Mapping.lookup t x = Some y \<Longrightarrow> f x y = f' x y"
+  shows "Mapping.map_values f t = Mapping.map_values f' t"
+  apply (auto simp: lookup_map_values intro!: mapping_eqI)
+  subgoal for x
+    using assms
+    by (cases "Mapping.lookup t x") auto
+  done
+
+lemma ad_agr_close_set_length: "z \<in> ad_agr_close_set AD X \<Longrightarrow> (\<And>x. x \<in> X \<Longrightarrow> length x = n) \<Longrightarrow> length z = n"
+  by (auto simp: ad_agr_close_set_def ad_agr_close_def split: if_splits dest: ad_agr_close_rec_length)
+
+lemma ad_agr_close_set_sound: "z \<in> ad_agr_close_set (AD - AD') X \<Longrightarrow> (\<And>x. x \<in> X \<Longrightarrow> fo_nmlzd AD' x) \<Longrightarrow> AD' \<subseteq> AD \<Longrightarrow> fo_nmlzd AD z"
+  using ad_agr_close_sound[where ?X=AD' and ?Y="AD - AD'"]
+  by (auto simp: ad_agr_close_set_def Set.is_empty_def split: if_splits) (metis Diff_partition Un_Diff_cancel)
+
+lemma ext_tuple_set_length: "z \<in> ext_tuple_set AD ns ns' X \<Longrightarrow> (\<And>x. x \<in> X \<Longrightarrow> length x = length ns) \<Longrightarrow> length z = length ns + length ns'"
+  by (auto simp: ext_tuple_set_def ext_tuple_def fo_nmlz_length merge_length dest: nall_tuples_rec_length split: if_splits)
 
 lemma eval_ajoin:
   fixes \<phi> :: "('a :: infinite, 'b) fo_fmla"
-  assumes wf: "fo_wf \<phi> I t\<phi>" "fo_wf \<psi>' I t\<psi>'"
-  shows "fo_wf (Conj \<phi> (Neg \<psi>')) I
-    (eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>') t\<psi>')"
+  assumes wf: "fo_wf \<phi> I t\<phi>" "fo_wf \<psi> I t\<psi>"
+  shows "fo_wf (Conj \<phi> (Neg \<psi>)) I
+    (eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>)"
 proof -
-  obtain AD\<phi> n\<phi> X\<phi> AD\<psi>' n\<psi>' X\<psi>' where ts_def:
-    "t\<phi> = (AD\<phi>, n\<phi>, X\<phi>)" "t\<psi>' = (AD\<psi>', n\<psi>', X\<psi>')"
-    "AD\<phi> = act_edom \<phi> I" "AD\<psi>' = act_edom \<psi>' I"
+  obtain AD\<phi> n\<phi> X\<phi> AD\<psi> n\<psi> X\<psi> where ts_def:
+    "t\<phi> = (AD\<phi>, n\<phi>, X\<phi>)" "t\<psi> = (AD\<psi>, n\<psi>, X\<psi>)"
+    "AD\<phi> = act_edom \<phi> I" "AD\<psi> = act_edom \<psi> I"
     using assms
-    by (cases t\<phi>, cases t\<psi>') auto
-  have AD_sub: "act_edom \<phi> I \<subseteq> AD\<phi>" "act_edom \<psi>' I \<subseteq> AD\<psi>'"
+    by (cases t\<phi>, cases t\<psi>) auto
+  have AD_sub: "act_edom \<phi> I \<subseteq> AD\<phi>" "act_edom \<psi> I \<subseteq> AD\<psi>"
     by (auto simp: ts_def(3,4))
 
   obtain AD n X where AD_X_def:
-    "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>') t\<psi>' = (AD, n, X)"
-    by (cases "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>') t\<psi>'") auto
-  have AD_def: "AD = act_edom (Conj \<phi> (Neg \<psi>')) I"
-    "act_edom (Conj \<phi> (Neg \<psi>')) I \<subseteq> AD" "AD\<phi> \<subseteq> AD" "AD\<psi>' \<subseteq> AD" "AD = AD\<phi> \<union> AD\<psi>'"
+    "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> = (AD, n, X)"
+    by (cases "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi>") auto
+  have AD_def: "AD = act_edom (Conj \<phi> (Neg \<psi>)) I"
+    "act_edom (Conj \<phi> (Neg \<psi>)) I \<subseteq> AD" "AD\<phi> \<subseteq> AD" "AD\<psi> \<subseteq> AD" "AD = AD\<phi> \<union> AD\<psi>"
     using AD_X_def
     by (auto simp: ts_def Let_def)
-  have n_def: "n = nfv (Conj \<phi> (Neg \<psi>'))"
+  have n_def: "n = nfv (Conj \<phi> (Neg \<psi>))"
     using AD_X_def
     by (auto simp: ts_def Let_def nfv_card fv_fo_fmla_list_set)
 
   define S\<phi> where "S\<phi> \<equiv> {\<sigma>. esat \<phi> I \<sigma> UNIV}"
-  define S\<psi>' where "S\<psi>' \<equiv> {\<sigma>. esat \<psi>' I \<sigma> UNIV}"
-  define ns\<phi>' where "ns\<phi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<phi>) (fv_fo_fmla_list \<psi>')"
-  define ns\<psi>' where "ns\<psi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<psi>') (fv_fo_fmla_list \<phi>)"
-  define ns where "ns = sort (fv_fo_fmla_list \<phi> @ fv_fo_fmla_list \<psi>')"
+  define S\<psi> where "S\<psi> \<equiv> {\<sigma>. esat \<psi> I \<sigma> UNIV}"
+  define both where "both = remdups_adj (sort (fv_fo_fmla_list \<phi> @ fv_fo_fmla_list \<psi>))"
+  define ns\<phi>' where "ns\<phi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<phi>) (fv_fo_fmla_list \<psi>)"
+  define ns\<psi>' where "ns\<psi>' = filter (\<lambda>n. n \<notin> fv_fo_fmla \<psi>) (fv_fo_fmla_list \<phi>)"
+
+  define AD\<Delta>\<phi> where "AD\<Delta>\<phi> = AD - AD\<phi>"
+  define AD\<Delta>\<psi> where "AD\<Delta>\<psi> = AD - AD\<psi>"
+  define ns\<phi> where "ns\<phi> = fv_fo_fmla_list \<phi>"
+  define ns\<psi> where "ns\<psi> = fv_fo_fmla_list \<psi>"
+  define ns where "ns = filter (\<lambda>n. n \<in> set ns\<psi>) ns\<phi>"
+  define X\<phi>' where "X\<phi>' = ext_tuple_set AD ns\<phi> ns\<phi>' (ad_agr_close_set AD\<Delta>\<phi> X\<phi>)"
+  define idx\<phi> where "idx\<phi> = cluster (Some \<circ> (\<lambda>xs. fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> xs)))) (ad_agr_close_set AD\<Delta>\<phi> X\<phi>)"
+  define idx\<psi> where "idx\<psi> = cluster (Some \<circ> (\<lambda>ys. fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<psi> ys)))) X\<psi>"
+  define res where "res = Mapping.map_values (\<lambda>xs X. case Mapping.lookup idx\<psi> xs of
+    Some Y \<Rightarrow> eval_conj_set AD ns\<phi> X ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {xs} - Y))
+    | _ \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' X) idx\<phi>"
 
   note X\<phi>_def = fo_wf_X[OF wf(1)[unfolded ts_def(1)], unfolded proj_fmla_def, folded S\<phi>_def]
-  note X\<psi>'_def = fo_wf_X[OF wf(2)[unfolded ts_def(2)], unfolded proj_fmla_def, folded S\<psi>'_def]
-  have fv_sub: "fv_fo_fmla (Conj \<phi> (Neg \<psi>')) = fv_fo_fmla \<phi> \<union> set (fv_fo_fmla_list \<psi>')"
-    "fv_fo_fmla (Conj \<phi> (Neg \<psi>')) = fv_fo_fmla \<psi>' \<union> set (fv_fo_fmla_list \<phi>)"
+  note X\<psi>_def = fo_wf_X[OF wf(2)[unfolded ts_def(2)], unfolded proj_fmla_def, folded S\<psi>_def]
+
+  have fv_sub: "fv_fo_fmla (Conj \<phi> (Neg \<psi>)) = fv_fo_fmla \<psi> \<union> set (fv_fo_fmla_list \<phi>)"
     by (auto simp: fv_fo_fmla_list_set)
-  note res_left_alt = ext_tuple_ad_agr_close[OF S\<phi>_def AD_sub(1) AD_def(3)
-       X\<phi>_def(1)[folded S\<phi>_def] ns\<phi>'_def sorted_distinct_fv_list fv_sub(1)]
-  note res_right_alt = ext_tuple_ad_agr_close[OF S\<psi>'_def AD_sub(2) AD_def(4)
-       X\<psi>'_def(1)[folded S\<psi>'_def] ns\<psi>'_def sorted_distinct_fv_list fv_sub(2)]
-
-  have Z_props: "\<And>xs. xs \<in> fo_nmlz AD ` proj_vals S\<phi> (fv_fo_fmla_list (Conj \<phi> (Neg \<psi>'))) \<Longrightarrow>
-    fo_nmlz AD xs = xs \<and> length xs = length (fv_fo_fmla_list (Conj \<phi> (Neg \<psi>')))"
-    using fo_nmlz_idem[OF fo_nmlz_sound]
-    by (auto simp: fo_nmlz_length proj_vals_def)
-  have Z_diff: "fo_nmlz AD ` proj_vals S\<phi> (fv_fo_fmla_list (Conj \<phi> (Neg \<psi>'))) -
-    ext_tuple_set AD (fv_fo_fmla_list \<psi>') ns\<psi>' (ad_agr_close_set (AD - AD\<psi>') X\<psi>') =
-    {xs \<in> fo_nmlz AD ` proj_vals S\<phi> (fv_fo_fmla_list (Conj \<phi> (Neg \<psi>'))).
-      fo_nmlz AD\<psi>' (proj_tuple (fv_fo_fmla_list \<psi>') (zip (fv_fo_fmla_list (Conj \<phi> (Neg \<psi>'))) xs))
-      \<notin> X\<psi>'}"
-    using proj_ext_tuple(2)[OF S\<psi>'_def AD_def(4)[unfolded ts_def(4)] res_right_alt(2)
-      ns\<psi>'_def sorted_distinct_fv_list fv_sub(2) Z_props]
-      fo_nmlz_ad_agr_close[OF AD_sub(2) AD_def(4) S\<psi>'_def X\<psi>'_def]
-    by auto
-
-  have fv_sort: "fv_fo_fmla_list (Conj \<phi> (Neg \<psi>')) =
-    remdups_adj (sort (fv_fo_fmla_list \<phi> @ fv_fo_fmla_list \<psi>'))"
+  have fv_sort: "fv_fo_fmla_list (Conj \<phi> (Neg \<psi>)) = both"
+    unfolding both_def
     apply (rule sorted_distinct_set_unique)
     using sorted_distinct_fv_list
     by (auto simp: fv_fo_fmla_list_def distinct_remdups_adj_sort)
 
-  have X_def: "X = fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>')) {\<sigma>. esat \<phi> I \<sigma> UNIV} -
-     fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>')) {\<sigma>. esat \<psi>' I \<sigma> UNIV}"
+  have AD_disj: "AD\<phi> \<inter> AD\<Delta>\<phi> = {}" "AD\<psi> \<inter> AD\<Delta>\<psi> = {}"
+    by (auto simp: AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def)
+  have AD_delta: "AD = AD\<phi> \<union> AD\<Delta>\<phi>" "AD = AD\<psi> \<union> AD\<Delta>\<psi>"
+    by (auto simp: AD\<Delta>\<phi>_def AD\<Delta>\<psi>_def AD_def ts_def)
+  have fo_nmlzd_X: "Ball X\<phi> (fo_nmlzd AD\<phi>)" "Ball X\<psi> (fo_nmlzd AD\<psi>)"
+    using wf
+    by (auto simp: ts_def)
+  have Ball_ad_agr: "Ball (ad_agr_close_set AD\<Delta>\<phi> X\<phi>) (fo_nmlzd AD)"
+    using ad_agr_close_sound[where ?X="AD\<phi>" and ?Y="AD\<Delta>\<phi>"] fo_nmlzd_X(1)
+    by (auto simp: ad_agr_close_set_eq[OF fo_nmlzd_X(1)] AD_disj AD_delta)
+  have ad_agr_\<phi>:
+    "\<And>\<sigma> \<tau>. ad_agr_sets (set (fv_fo_fmla_list \<phi>)) (set (fv_fo_fmla_list \<phi>)) AD\<phi> \<sigma> \<tau> \<Longrightarrow> \<sigma> \<in> S\<phi> \<longleftrightarrow> \<tau> \<in> S\<phi>"
+    "\<And>\<sigma> \<tau>. ad_agr_sets (set (fv_fo_fmla_list \<phi>)) (set (fv_fo_fmla_list \<phi>)) AD \<sigma> \<tau> \<Longrightarrow> \<sigma> \<in> S\<phi> \<longleftrightarrow> \<tau> \<in> S\<phi>"
+    using esat_UNIV_cong[OF ad_agr_sets_restrict, OF _ subset_refl] ad_agr_sets_mono AD_sub(1) subset_trans[OF AD_sub(1) AD_def(3)]
+    unfolding S\<phi>_def
+    by blast+
+  have ad_agr_S\<phi>: "\<tau>' \<in> S\<phi> \<Longrightarrow> ad_agr_list AD\<phi> (map \<tau>' ns\<phi>) (map \<tau>'' ns\<phi>) \<Longrightarrow> \<tau>'' \<in> S\<phi>" for \<tau>' \<tau>''
+    using ad_agr_\<phi>
+    by (auto simp: ad_agr_list_link ns\<phi>_def)
+  have ad_agr_\<psi>:
+    "\<And>\<sigma> \<tau>. ad_agr_sets (set (fv_fo_fmla_list \<psi>)) (set (fv_fo_fmla_list \<psi>)) AD\<psi> \<sigma> \<tau> \<Longrightarrow> \<sigma> \<in> S\<psi> \<longleftrightarrow> \<tau> \<in> S\<psi>"
+    using esat_UNIV_cong[OF ad_agr_sets_restrict, OF _ subset_refl] ad_agr_sets_mono[OF AD_sub(2)]
+    unfolding S\<psi>_def
+    by blast+
+  have ad_agr_S\<psi>: "\<tau>' \<in> S\<psi> \<Longrightarrow> ad_agr_list AD\<psi> (map \<tau>' ns\<psi>) (map \<tau>'' ns\<psi>) \<Longrightarrow> \<tau>'' \<in> S\<psi>" for \<tau>' \<tau>''
+    using ad_agr_\<psi>
+    by (auto simp: ad_agr_list_link ns\<psi>_def)
+  have aux: "sorted_distinct ns\<phi>" "sorted_distinct ns\<phi>'" "sorted_distinct both" "set ns\<phi> \<inter> set ns\<phi>' = {}" "set ns\<phi> \<union> set ns\<phi>' = set both"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def fv_sort[symmetric] fv_fo_fmla_list_set sorted_distinct_fv_list intro: sorted_filter[where ?f=id, simplified])
+  have aux2: "ns\<phi>' = filter (\<lambda>n. n \<notin> set ns\<phi>) ns\<phi>'" "ns\<phi> = filter (\<lambda>n. n \<notin> set ns\<phi>') ns\<phi>"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def ns\<psi>_def ns\<psi>'_def fv_fo_fmla_list_set)
+  have aux3: "set ns\<phi>' \<inter> set ns = {}" "set ns\<phi>' \<union> set ns = set ns\<psi>"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def ns\<psi>_def ns_def fv_fo_fmla_list_set)
+  have aux4: "set ns \<inter> set ns\<phi>' = {}" "set ns \<union> set ns\<phi>' = set ns\<psi>"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def ns\<psi>_def ns_def fv_fo_fmla_list_set)
+  have aux5: "ns\<phi>' = filter (\<lambda>n. n \<notin> set ns\<phi>) ns\<psi>" "ns\<psi>' = filter (\<lambda>n. n \<notin> set ns\<psi>) ns\<phi>"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def ns\<psi>_def ns\<psi>'_def fv_fo_fmla_list_set)
+  have aux6: "set ns\<psi> \<inter> set ns\<psi>' = {}" "set ns\<psi> \<union> set ns\<psi>' = set both"
+    by (auto simp: ns\<phi>_def ns\<phi>'_def ns\<psi>_def ns\<psi>'_def both_def fv_fo_fmla_list_set)
+  have ns_sd: "sorted_distinct ns" "sorted_distinct ns\<phi>" "sorted_distinct ns\<psi>" "set ns \<subseteq> set ns\<phi>" "set ns \<subseteq> set ns\<psi>" "set ns \<subseteq> set both" "set ns\<phi>' \<subseteq> set ns\<psi>" "set ns\<psi> \<subseteq> set both"
+    by (auto simp: ns_def ns\<phi>_def ns\<phi>'_def ns\<psi>_def both_def sorted_distinct_fv_list intro: sorted_filter[where ?f=id, simplified])
+  have ns_sd': "sorted_distinct ns\<psi>'"
+    by (auto simp: ns\<psi>'_def sorted_distinct_fv_list intro: sorted_filter[where ?f=id, simplified])
+  have ns: "ns = filter (\<lambda>n. n \<in> fv_fo_fmla \<phi>) (fv_fo_fmla_list \<psi>)"
+    by (rule sorted_distinct_set_unique)
+       (auto simp: ns_def ns\<phi>_def ns\<psi>_def fv_fo_fmla_list_set sorted_distinct_fv_list intro: sorted_filter[where ?f=id, simplified])
+  have len_ns\<psi>: "length ns + length ns\<phi>' = length ns\<psi>"
+    using sum_length_filter_compl[where ?P="\<lambda>n. n \<in> fv_fo_fmla \<phi>" and ?xs="fv_fo_fmla_list \<psi>"]
+    by (auto simp: ns ns\<phi>_def ns\<phi>'_def ns\<psi>_def fv_fo_fmla_list_set)
+
+  have res_eq: "res = Mapping.map_values (\<lambda>xs X. case Mapping.lookup idx\<psi> xs of
+    Some Y \<Rightarrow> idx_join AD ns ns\<phi> X ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {xs} - Y))
+    | _ \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' X) idx\<phi>"
+  proof -
+    have ad_agr_X\<phi>: "ad_agr_close_set AD\<Delta>\<phi> X\<phi> = fo_nmlz AD ` proj_vals S\<phi> ns\<phi>"
+      unfolding X\<phi>_def ad_agr_close_set_nmlz_eq ns\<phi>_def[symmetric]
+      apply (rule ad_agr_close_set_correct[OF AD_def(3) aux(1), folded AD\<Delta>\<phi>_def])
+      using ad_agr_S\<phi> ad_agr_list_comm
+      by (fastforce simp: ad_agr_list_link)
+    have idx_eval: "idx_join AD ns ns\<phi> y ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {x} - x2)) =
+       eval_conj_set AD ns\<phi> y ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {x} - x2))"
+      if lup: "Mapping.lookup idx\<phi> x = Some y" "Mapping.lookup idx\<psi> x = Some x2" for x y x2
+    proof -
+      have "vs \<in> y \<Longrightarrow> fo_nmlzd AD vs \<and> length vs = length ns\<phi>" for vs
+        using lup(1)
+        by (auto simp: idx\<phi>_def lookup_cluster' ad_agr_X\<phi> fo_nmlz_sound fo_nmlz_length proj_vals_def split: if_splits)
+      moreover have "vs \<in> ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {x} - x2) \<Longrightarrow> fo_nmlzd AD vs" for vs
+        apply (rule ad_agr_close_set_sound[OF _ _ AD_def(4), folded AD\<Delta>\<psi>_def, where ?X="ext_tuple_set AD\<psi> ns ns\<phi>' {x} - x2"])
+        using lup(1)
+        by (auto simp: idx\<phi>_def lookup_cluster' ext_tuple_set_def fo_nmlz_sound split: if_splits)
+      moreover have "vs \<in> ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {x} - x2) \<Longrightarrow> length vs = length ns\<psi>" for vs
+        apply (erule ad_agr_close_set_length)
+        apply (rule ext_tuple_set_length[where ?AD=AD\<psi> and ?ns=ns and ?ns'=ns\<phi>' and ?X="{x}", unfolded len_ns\<psi>])
+        using lup(1) ns_sd(1,2,4)
+        by (auto simp: idx\<phi>_def lookup_cluster' fo_nmlz_length ad_agr_X\<phi> proj_vals_def intro!: proj_tuple_length split: if_splits)
+      ultimately show ?thesis
+        by (auto intro!: idx_join[OF _ _ ns_sd(2-3) ns_def])
+    qed
+    show ?thesis
+      unfolding res_def
+      by (rule map_values_cong) (auto simp: idx_eval split: option.splits)
+  qed
+
+  have eval_conj: "eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y)) =
+  ext_tuple_set AD ns\<phi> ns\<phi>' {x} \<inter> ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>)"
+    if x_ns: "proj_tuple ns (zip ns\<phi> x) = map \<sigma>' ns"
+      and x_proj_singleton: "{x} = fo_nmlz AD ` proj_vals {\<sigma>} ns\<phi>"
+      and Some: "Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) = Some Y"
+    for x Y \<sigma> \<sigma>'
+  proof -
+    have "Y = {ys \<in> fo_nmlz AD\<psi> ` proj_vals S\<psi> ns\<psi>. fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<psi> ys)) = fo_nmlz AD\<psi> (map \<sigma>' ns)}"
+      using Some
+      apply (auto simp: X\<psi>_def idx\<psi>_def ns\<psi>_def x_ns lookup_cluster' split: if_splits)
+      done
+    moreover have "\<dots> = fo_nmlz AD\<psi> ` proj_vals {\<sigma> \<in> S\<psi>. fo_nmlz AD\<psi> (map \<sigma> ns) = fo_nmlz AD\<psi> (map \<sigma>' ns)} ns\<psi>"
+      by (auto simp: proj_vals_def fo_nmlz_twice[OF ns_sd(1,3,5)])+
+    moreover have "\<dots> = fo_nmlz AD\<psi> ` proj_vals {\<sigma> \<in> S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      by (auto simp: fo_nmlz_eq)
+    ultimately have Y_def: "Y = fo_nmlz AD\<psi> ` proj_vals {\<sigma> \<in> S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      by auto
+    have R_def: "{fo_nmlz AD\<psi> (map \<sigma>' ns)} = fo_nmlz AD\<psi> ` proj_vals {\<sigma>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns"
+      using ad_agr_list_refl
+      by (auto simp: proj_vals_def intro: fo_nmlz_eqI)
+    have "ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (map \<sigma>' ns)} = fo_nmlz AD\<psi> ` proj_vals {\<sigma>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      apply (rule ext_tuple_correct[OF ns_sd(1) aux(2) ns_sd(3) aux4 R_def])
+      using ad_agr_list_trans ad_agr_list_comm
+      apply (auto simp: ad_agr_list_link)
+      by fast
+    then have "ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (map \<sigma>' ns)} - Y = fo_nmlz AD\<psi> ` proj_vals {\<sigma> \<in> -S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      apply (auto simp: Y_def proj_vals_def fo_nmlz_eq)
+      using ad_agr_S\<psi> ad_agr_list_comm
+      by blast+
+    moreover have "ad_agr_close_set AD\<Delta>\<psi> (fo_nmlz AD\<psi> ` proj_vals {\<sigma> \<in> -S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>) =
+      fo_nmlz AD ` proj_vals {\<sigma> \<in> -S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      unfolding ad_agr_close_set_eq[OF Ball_fo_nmlzd]
+      apply (rule ad_agr_close_set_correct[OF AD_def(4) ns_sd(3), folded AD\<Delta>\<psi>_def])
+      apply (auto simp: ad_agr_list_link)
+      using ad_agr_S\<psi> ad_agr_list_comm ad_agr_list_subset[OF ns_sd(5)] ad_agr_list_trans
+      by blast+
+    ultimately have comp_proj: "ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (map \<sigma>' ns)} - Y) =
+          fo_nmlz AD ` proj_vals {\<sigma> \<in> -S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>"
+      by simp
+    have "ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>) = fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} both"
+      apply (rule ext_tuple_correct[OF ns_sd(3) ns_sd'(1) aux(3) aux6 refl])
+      apply (auto simp: ad_agr_list_link)
+      using ad_agr_S\<psi> ad_agr_list_comm ad_agr_list_subset[OF ns_sd(5)] ad_agr_list_trans ad_agr_list_mono[OF AD_def(4)]
+      by fast+
+    show "eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y)) =
+      ext_tuple_set AD ns\<phi> ns\<phi>' {x} \<inter> ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>)"
+      unfolding x_ns comp_proj
+      using eval_conj_set_correct[OF aux5 x_proj_singleton refl aux(1) ns_sd(3)]
+      by auto
+  qed
+
+  have "X = set_of_idx res"
     using AD_X_def
     unfolding eval_ajoin.simps ts_def(1,2) Let_def AD_def(5)[symmetric] fv_fo_fmla_list_set
-      ns\<phi>'_def[symmetric] res_left_alt(1) fv_sort[symmetric] Z_diff[symmetric]
-      res_right_alt(1) proj_fmla_def S\<phi>_def[symmetric] S\<psi>'_def[symmetric]
+      ns\<phi>'_def[symmetric] fv_sort[symmetric] proj_fmla_def S\<phi>_def[symmetric] S\<psi>_def[symmetric]
+      AD\<Delta>\<phi>_def[symmetric] AD\<Delta>\<psi>_def[symmetric]
+      ns\<phi>_def[symmetric] ns\<phi>'_def[symmetric, folded fv_fo_fmla_list_set[of \<phi>, folded ns\<phi>_def] ns\<psi>_def] ns\<psi>_def[symmetric] ns_def[symmetric]
+      X\<phi>'_def[symmetric] idx\<phi>_def[symmetric] idx\<psi>_def[symmetric] res_eq[symmetric]
     by auto
+  moreover have "\<dots> = (\<Union>x\<in>ad_agr_close_set AD\<Delta>\<phi> X\<phi>.
+      case Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) of None \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' {x}
+      | Some Y \<Rightarrow> eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y)))"
+    unfolding res_def[unfolded idx\<phi>_def]
+    apply (rule map_values_cluster)
+     apply (auto simp: eval_conj_set_def split: option.splits)
+     apply (auto simp: ext_tuple_set_def split: if_splits)
+    done
+  moreover have "\<dots> = fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat \<phi> I \<sigma> UNIV} -
+     fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat \<psi> I \<sigma> UNIV}"
+    unfolding S\<phi>_def[symmetric] S\<psi>_def[symmetric] proj_fmla_def fv_sort
+  proof (rule set_eqI, rule iffI)
+    fix t
+    assume "t \<in> (\<Union>x\<in>ad_agr_close_set AD\<Delta>\<phi> X\<phi>. case Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) of
+      None \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' {x}
+    | Some Y \<Rightarrow> eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y)))"
+    then obtain x where x: "x \<in> ad_agr_close_set AD\<Delta>\<phi> X\<phi>"
+      "Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) = None \<Longrightarrow> t \<in> ext_tuple_set AD ns\<phi> ns\<phi>' {x}"
+      "\<And>Y. Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) = Some Y \<Longrightarrow>
+      t \<in> eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y))"
+      by (fastforce split: option.splits)
+    obtain \<sigma> where val: "\<sigma> \<in> S\<phi>" "x = fo_nmlz AD (map \<sigma> ns\<phi>)"
+      using ad_agr_close_correct[OF AD_def(3) ad_agr_\<phi>(1), folded AD\<Delta>\<phi>_def] X\<phi>_def[folded proj_fmla_def] ad_agr_close_set_eq[OF fo_nmlzd_X(1)] x(1)
+      apply (auto simp: proj_fmla_def proj_vals_def ns\<phi>_def)
+      apply fast
+      done
+    obtain \<sigma>' where \<sigma>': "x = map \<sigma>' ns\<phi>"
+      using exists_map[where ?ys=x and ?xs=ns\<phi>] aux(1)
+      by (auto simp: val(2) fo_nmlz_length)
+    have x_proj_singleton: "{x} = fo_nmlz AD ` proj_vals {\<sigma>} ns\<phi>"
+      by (auto simp: val(2) proj_vals_def)
+    have x_ns: "proj_tuple ns (zip ns\<phi> x) = map \<sigma>' ns"
+      unfolding \<sigma>'
+      by (rule proj_tuple_map[OF ns_sd(1-2,4)])
+    have ad_agr_\<sigma>_\<sigma>': "ad_agr_list AD (map \<sigma> ns\<phi>) (map \<sigma>' ns\<phi>)"
+      using \<sigma>'
+      by (auto simp: val(2)) (metis fo_nmlz_ad_agr)
+    have x_proj_ad_agr: "{x} = fo_nmlz AD ` proj_vals {\<sigma>. ad_agr_list AD (map \<sigma> ns\<phi>) (map \<sigma>' ns\<phi>)} ns\<phi>"
+      using ad_agr_\<sigma>_\<sigma>' ad_agr_list_comm ad_agr_list_trans
+      by (auto simp: val(2) proj_vals_def fo_nmlz_eq) blast
+    have "t \<in> fo_nmlz AD ` \<Union> (ext_tuple AD ns\<phi> ns\<phi>' ` {x}) \<Longrightarrow> fo_nmlz AD (proj_tuple ns\<phi> (zip both t)) \<in> {x}"
+      apply (rule ext_tuple_sound(1)[OF aux x_proj_ad_agr])
+       apply (auto simp: ad_agr_list_link)
+      using ad_agr_list_comm ad_agr_list_trans
+      by blast+
+    then have x_proj: "t \<in> ext_tuple_set AD ns\<phi> ns\<phi>' {x} \<Longrightarrow> x = fo_nmlz AD (proj_tuple ns\<phi> (zip both t))"
+      using ext_tuple_set_eq[where ?AD=AD] Ball_ad_agr x(1)
+      by (auto simp: val(2) proj_vals_def)
+    have x_S\<phi>: "t \<in> ext_tuple_set AD ns\<phi> ns\<phi>' {x} \<Longrightarrow> t \<in> fo_nmlz AD ` proj_vals S\<phi> both"
+      using ext_tuple_correct[OF aux refl ad_agr_\<phi>(2)[folded ns\<phi>_def]] ext_tuple_set_mono[of "{x}" "fo_nmlz AD ` proj_vals S\<phi> ns\<phi>"] val(1)
+      by (fastforce simp: val(2) proj_vals_def)
+    show "t \<in> fo_nmlz AD ` proj_vals S\<phi> both - fo_nmlz AD ` proj_vals S\<psi> both"
+    proof (cases "Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x)))")
+      case None
+      have "False" if t_in_S\<psi>: "t \<in> fo_nmlz AD ` proj_vals S\<psi> both"
+      proof -
+        obtain \<tau> where \<tau>: "\<tau> \<in> S\<psi>" "t = fo_nmlz AD (map \<tau> both)"
+          using t_in_S\<psi>
+          by (auto simp: proj_vals_def)
+        obtain \<tau>' where t_\<tau>': "t = map \<tau>' both"
+          using aux(3) exists_map[where ?ys=t and ?xs=both]
+          by (auto simp: \<tau>(2) fo_nmlz_length)
+        obtain \<tau>'' where \<tau>'': "fo_nmlz AD\<psi> (map \<tau> ns\<psi>) = map \<tau>'' ns\<psi>"
+          using ns_sd exists_map[where ?ys="fo_nmlz AD\<psi> (map \<tau> ns\<psi>)" and xs=ns\<psi>]
+          by (auto simp: fo_nmlz_length)
+        have proj_\<tau>'': "proj_tuple ns (zip ns\<psi> (map \<tau>'' ns\<psi>)) = map \<tau>'' ns"
+          apply (rule proj_tuple_map)
+          using ns_sd
+          by auto
+        have "proj_tuple ns\<phi> (zip both t) = map \<tau>' ns\<phi>"
+          unfolding t_\<tau>'
+          apply (rule proj_tuple_map)
+          using aux
+          by auto
+        then have x_\<tau>': "x = fo_nmlz AD (map \<tau>' ns\<phi>)"
+          by (auto simp: x_proj[OF x(2)[OF None]])
+        obtain \<tau>''' where \<tau>''': "x = map \<tau>''' ns\<phi>"
+          using aux exists_map[where ?ys=x and ?xs=ns\<phi>]
+          by (auto simp: x_\<tau>' fo_nmlz_length)
+        have ad_\<tau>_\<tau>': "ad_agr_list AD (map \<tau> both) (map \<tau>' both)"
+          using t_\<tau>'
+          by (auto simp: \<tau>) (metis fo_nmlz_ad_agr)
+        have ad_\<tau>_\<tau>'': "ad_agr_list AD\<psi> (map \<tau> ns\<psi>) (map \<tau>'' ns\<psi>)"
+          using \<tau>''
+          by (metis fo_nmlz_ad_agr)
+        have ad_\<tau>'_\<tau>''': "ad_agr_list AD (map \<tau>' ns\<phi>) (map \<tau>''' ns\<phi>)"
+          using \<tau>'''
+          by (auto simp: x_\<tau>') (metis fo_nmlz_ad_agr)
+        have proj_\<tau>''': "proj_tuple ns (zip ns\<phi> (map \<tau>''' ns\<phi>)) = map \<tau>''' ns"
+          apply (rule proj_tuple_map)
+          using aux ns_sd
+          by auto
+        have "fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x)) = fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<psi> (fo_nmlz AD\<psi> (map \<tau> ns\<psi>))))"
+          unfolding \<tau>'' proj_\<tau>'' \<tau>''' proj_\<tau>'''
+          apply (rule fo_nmlz_eqI)
+          using ad_agr_list_trans ad_agr_list_subset ns_sd(4-6) ad_agr_list_mono[OF AD_def(4)] ad_agr_list_comm[OF ad_\<tau>'_\<tau>'''] ad_agr_list_comm[OF ad_\<tau>_\<tau>'] ad_\<tau>_\<tau>''
+          by metis
+        then show ?thesis
+          using None \<tau>(1)
+          by (auto simp: idx\<psi>_def lookup_cluster' X\<psi>_def ns\<psi>_def[symmetric] proj_vals_def split: if_splits)
+      qed
+      then show ?thesis
+        using x_S\<phi>[OF x(2)[OF None]]
+        by auto
+    next
+      case (Some Y)
+      have t_in: "t \<in> ext_tuple_set AD ns\<phi> ns\<phi>' {x}" "t \<in> ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>)"
+        using x(3)[OF Some] eval_conj[OF x_ns x_proj_singleton Some]
+        by auto
+      have "ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>) = fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} both"
+        apply (rule ext_tuple_correct[OF ns_sd(3) ns_sd'(1) aux(3) aux6 refl])
+        apply (auto simp: ad_agr_list_link)
+        using ad_agr_S\<psi> ad_agr_list_comm ad_agr_list_subset[OF ns_sd(5)] ad_agr_list_trans ad_agr_list_mono[OF AD_def(4)]
+        by fast+
+      then have t_both: "t \<in> fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} both"
+        using t_in(2)
+        by auto
+      {
+        assume "t \<in> fo_nmlz AD ` proj_vals S\<psi> both"
+        then obtain \<tau> where \<tau>: "\<tau> \<in> S\<psi>" "t = fo_nmlz AD (map \<tau> both)"
+          by (auto simp: proj_vals_def)
+        obtain \<tau>' where \<tau>': "\<tau>' \<notin> S\<psi>" "t = fo_nmlz AD (map \<tau>' both)"
+          using t_both
+          by (auto simp: proj_vals_def)
+        have "False"
+          using \<tau> \<tau>'
+          apply (auto simp: fo_nmlz_eq)
+          using ad_agr_S\<psi> ad_agr_list_comm ad_agr_list_subset[OF ns_sd(8)] ad_agr_list_mono[OF AD_def(4)]
+          by blast
+      }
+      then show ?thesis
+        using x_S\<phi>[OF t_in(1)]
+        by auto
+    qed
+  next
+    fix t
+    assume t_in_asm: "t \<in> fo_nmlz AD ` proj_vals S\<phi> both - fo_nmlz AD ` proj_vals S\<psi> both"
+    then obtain \<sigma> where val: "\<sigma> \<in> S\<phi>" "t = fo_nmlz AD (map \<sigma> both)"
+      by (auto simp: proj_vals_def)
+    define x where "x = fo_nmlz AD (map \<sigma> ns\<phi>)"
+    obtain \<sigma>' where \<sigma>': "x = map \<sigma>' ns\<phi>"
+      using exists_map[where ?ys=x and ?xs=ns\<phi>] aux(1)
+      by (auto simp: x_def fo_nmlz_length)
+    have x_proj_singleton: "{x} = fo_nmlz AD ` proj_vals {\<sigma>} ns\<phi>"
+      by (auto simp: x_def proj_vals_def)
+    have x_in_ad_agr_close: "x \<in> ad_agr_close_set AD\<Delta>\<phi> X\<phi>"
+      using ad_agr_close_correct[OF AD_def(3) ad_agr_\<phi>(1), folded AD\<Delta>\<phi>_def] val(1)
+      unfolding ad_agr_close_set_eq[OF fo_nmlzd_X(1)] x_def
+      unfolding X\<phi>_def[folded proj_fmla_def] proj_fmla_map
+      by (fastforce simp: x_def ns\<phi>_def)
+    have ad_agr_\<sigma>_\<sigma>': "ad_agr_list AD (map \<sigma> ns\<phi>) (map \<sigma>' ns\<phi>)"
+      using \<sigma>'
+      by (auto simp: x_def) (metis fo_nmlz_ad_agr)
+    have x_proj_ad_agr: "{x} = fo_nmlz AD ` proj_vals {\<sigma>. ad_agr_list AD (map \<sigma> ns\<phi>) (map \<sigma>' ns\<phi>)} ns\<phi>"
+      using ad_agr_\<sigma>_\<sigma>' ad_agr_list_comm ad_agr_list_trans
+      by (auto simp: x_def proj_vals_def fo_nmlz_eq) blast+
+    have x_ns: "proj_tuple ns (zip ns\<phi> x) = map \<sigma>' ns"
+      unfolding \<sigma>'
+      by (rule proj_tuple_map[OF ns_sd(1-2,4)])
+    have "ext_tuple_set AD ns\<phi> ns\<phi>' {x} = fo_nmlz AD ` proj_vals {\<sigma>. ad_agr_list AD (map \<sigma> ns\<phi>) (map \<sigma>' ns\<phi>)} both"
+      apply (rule ext_tuple_correct[OF aux x_proj_ad_agr])
+      using ad_agr_list_comm ad_agr_list_trans
+      by (auto simp: ad_agr_list_link) blast+
+    then have t_in_ext_x: "t \<in> ext_tuple_set AD ns\<phi> ns\<phi>' {x}"
+      using ad_agr_\<sigma>_\<sigma>'
+      by (auto simp: val(2) proj_vals_def)
+    {
+      fix Y
+      assume Some: "Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (map \<sigma>' ns)) = Some Y"
+      have tmp: "proj_tuple ns (zip ns\<phi> x) = map \<sigma>' ns"
+        unfolding \<sigma>'
+        by (rule proj_tuple_map[OF ns_sd(1) aux(1) ns_sd(4)])
+      have unfold: "ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>) =
+        fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} both"
+        apply (rule ext_tuple_correct[OF ns_sd(3) ns_sd'(1) aux(3) aux6 refl])
+        apply (auto simp: ad_agr_list_link)
+        using ad_agr_S\<psi> ad_agr_list_mono[OF AD_def(4)] ad_agr_list_comm ad_agr_list_trans ad_agr_list_subset[OF ns_sd(5)]
+        by blast+
+      have "\<sigma> \<notin> S\<psi>"
+        using t_in_asm
+        by (auto simp: val(2) proj_vals_def)
+      moreover have "ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)"
+        using ad_agr_\<sigma>_\<sigma>' ad_agr_list_mono[OF AD_def(4)] ad_agr_list_subset[OF ns_sd(4)]
+        by blast
+      ultimately have "t \<in> ext_tuple_set AD ns\<psi> ns\<psi>' (fo_nmlz AD ` proj_vals {\<sigma> \<in> - S\<psi>. ad_agr_list AD\<psi> (map \<sigma> ns) (map \<sigma>' ns)} ns\<psi>)"
+        unfolding unfold val(2)
+        by (auto simp: proj_vals_def)
+      then have "t \<in> eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (map \<sigma>' ns)} - Y))"
+        using eval_conj[OF tmp x_proj_singleton Some[folded x_ns]] t_in_ext_x
+        by (auto simp: x_ns)
+    }
+    then show "t \<in> (\<Union>x\<in>ad_agr_close_set AD\<Delta>\<phi> X\<phi>. case Mapping.lookup idx\<psi> (fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))) of
+      None \<Rightarrow> ext_tuple_set AD ns\<phi> ns\<phi>' {x}
+    | Some Y \<Rightarrow> eval_conj_set AD ns\<phi> {x} ns\<psi> (ad_agr_close_set AD\<Delta>\<psi> (ext_tuple_set AD\<psi> ns ns\<phi>' {fo_nmlz AD\<psi> (proj_tuple ns (zip ns\<phi> x))} - Y)))"
+      using t_in_ext_x
+      by (intro UN_I[OF x_in_ad_agr_close]) (auto simp: x_ns split: option.splits)
+  qed
+  ultimately have X_def: "X = fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat \<phi> I \<sigma> UNIV} -
+    fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat \<psi> I \<sigma> UNIV}"
+    by simp
 
-  have AD_sub: "act_edom (Neg \<psi>') I \<subseteq> AD"
+  have AD_Neg_sub: "act_edom (Neg \<psi>) I \<subseteq> AD"
     by (auto simp: AD_def(1))
-  have "X = fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>')) {\<sigma>. esat \<phi> I \<sigma> UNIV} \<inter>
-     fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>')) {\<sigma>. esat (Neg \<psi>') I \<sigma> UNIV}"
+  have "X = fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat \<phi> I \<sigma> UNIV} \<inter>
+    fo_nmlz AD ` proj_fmla (Conj \<phi> (Neg \<psi>)) {\<sigma>. esat (Neg \<psi>) I \<sigma> UNIV}"
     unfolding X_def
     by (auto simp: proj_fmla_map dest!: fo_nmlz_eqD)
-       (metis AD_def(4) ad_agr_list_subset esat_UNIV_ad_agr_list fv_fo_fmla_list_set fv_sub(2)
+       (metis AD_def(4) ad_agr_list_subset esat_UNIV_ad_agr_list fv_fo_fmla_list_set fv_sub
         sup_ge1 ts_def(4))
-  then have eval: "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>') t\<psi>' =
-    eval_abs (Conj \<phi> (Neg \<psi>')) I"
-    using proj_fmla_conj_sub[OF AD_sub, of \<phi>]
+  then have eval: "eval_ajoin (fv_fo_fmla_list \<phi>) t\<phi> (fv_fo_fmla_list \<psi>) t\<psi> =
+    eval_abs (Conj \<phi> (Neg \<psi>)) I"
+    using proj_fmla_conj_sub[OF AD_Neg_sub, of \<phi>]
     unfolding AD_X_def AD_def(1)[symmetric] n_def eval_abs_def
     by (auto simp: proj_fmla_map)
-  have wf_conj_neg: "wf_fo_intp (Conj \<phi> (Neg \<psi>')) I"
+  have wf_conj_neg: "wf_fo_intp (Conj \<phi> (Neg \<psi>)) I"
     using wf
     by (auto simp: ts_def)
   show ?thesis
@@ -5242,7 +5537,7 @@ lemma fo_rep: "fo_wf \<phi> I t \<Longrightarrow> fo_rep t = proj_sat \<phi> I"
   by (cases t) auto
 
 global_interpretation Ailamazyan: eval_fo fo_wf eval_pred fo_rep fo_res
-  eval_bool eval_eq eval_neg eval_conj_idx eval_ajoin eval_disj
+  eval_bool eval_eq eval_neg eval_conj eval_ajoin eval_disj
   eval_exists eval_forall
   defines eval_fmla = Ailamazyan.eval_fmla
       and eval = Ailamazyan.eval

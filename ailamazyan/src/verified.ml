@@ -567,15 +567,15 @@ let rec fst (x1, x2) = x1;;
 let rec is_none = function Some x -> false
                   | None -> true;;
 
-let rec filtera
+let rec filter
   p x1 = match p, x1 with p, [] -> []
-    | p, x :: xs -> (if p x then x :: filtera p xs else filtera p xs);;
+    | p, x :: xs -> (if p x then x :: filter p xs else filter p xs);;
 
 let rec inter_list _A
   xb xc =
     Mapping_RBTa
       (fold (fun k -> rbt_comp_insert (the (ccompare _A)) k ())
-        (filtera
+        (filter
           (fun x ->
             not (is_none
                   (rbt_comp_lookup (the (ccompare _A)) (impl_ofa _A xb) x)))
@@ -637,8 +637,8 @@ let rec gen_entries
 
 let rec entries x = gen_entries [] x;;
 
-let rec filtere _A
-  xb xc = Mapping_RBTa (rbtreeify (filtera xb (entries (impl_ofa _A xc))));;
+let rec filterd _A
+  xb xc = Mapping_RBTa (rbtreeify (filter xb (entries (impl_ofa _A xc))));;
 
 let rec map_filter
   f x1 = match f, x1 with f, [] -> []
@@ -699,7 +699,7 @@ let rec meet _A
       (rbt_comp_inter_with_key (the (ccompare _A)) xc (impl_ofa _A xd)
         (impl_ofa _A xe));;
 
-let rec filterd _A xb xc = Abs_dlist (filtera xb (list_of_dlist _A xc));;
+let rec filterc _A xb xc = Abs_dlist (filter xb (list_of_dlist _A xc));;
 
 let rec comp f g = (fun x -> f (g x));;
 
@@ -733,13 +733,13 @@ let rec inf_seta (_A1, _A2)
           with None ->
             failwith "inter DList_set Set_Monad: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) (DList_set dxs1) (Set_Monad xs))
-          | Some eq -> DList_set (filterd _A1 (list_member eq xs) dxs1))
+          | Some eq -> DList_set (filterc _A1 (list_member eq xs) dxs1))
     | DList_set dxs1, DList_set dxs2 ->
         (match ceq _A1
           with None ->
             failwith "inter DList_set DList_set: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) (DList_set dxs1) (DList_set dxs2))
-          | Some _ -> DList_set (filterd _A1 (memberc _A1 dxs2) dxs1))
+          | Some _ -> DList_set (filterc _A1 (memberc _A1 dxs2) dxs1))
     | DList_set dxs, RBT_set rbt ->
         (match ccompare _A2
           with None ->
@@ -756,13 +756,13 @@ let rec inf_seta (_A1, _A2)
           with None ->
             failwith "inter Set_Monad Set_Monad: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) (Set_Monad xs1) (Set_Monad xs2))
-          | Some eq -> Set_Monad (filtera (list_member eq xs2) xs1))
+          | Some eq -> Set_Monad (filter (list_member eq xs2) xs1))
     | Set_Monad xs, DList_set dxs2 ->
         (match ceq _A1
           with None ->
             failwith "inter Set_Monad DList_set: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) (Set_Monad xs) (DList_set dxs2))
-          | Some eq -> DList_set (filterd _A1 (list_member eq xs) dxs2))
+          | Some eq -> DList_set (filterc _A1 (list_member eq xs) dxs2))
     | Set_Monad xs, RBT_set rbt1 ->
         (match ccompare _A2
           with None ->
@@ -777,7 +777,7 @@ let rec inf_seta (_A1, _A2)
               (fun _ -> inf_seta (_A1, _A2) g (RBT_set rbt2))
           | Some _ ->
             RBT_set
-              (filtere _A2 (comp (fun x -> member (_A1, _A2) x g) fst) rbt2))
+              (filterd _A2 (comp (fun x -> member (_A1, _A2) x g) fst) rbt2))
     | RBT_set rbt1, g ->
         (match ccompare _A2
           with None ->
@@ -785,23 +785,23 @@ let rec inf_seta (_A1, _A2)
               (fun _ -> inf_seta (_A1, _A2) (RBT_set rbt1) g)
           | Some _ ->
             RBT_set
-              (filtere _A2 (comp (fun x -> member (_A1, _A2) x g) fst) rbt1))
+              (filterd _A2 (comp (fun x -> member (_A1, _A2) x g) fst) rbt1))
     | h, DList_set dxs2 ->
         (match ceq _A1
           with None ->
             failwith "inter DList_set2: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) h (DList_set dxs2))
           | Some _ ->
-            DList_set (filterd _A1 (fun x -> member (_A1, _A2) x h) dxs2))
+            DList_set (filterc _A1 (fun x -> member (_A1, _A2) x h) dxs2))
     | DList_set dxs1, h ->
         (match ceq _A1
           with None ->
             failwith "inter DList_set1: ceq = None"
               (fun _ -> inf_seta (_A1, _A2) (DList_set dxs1) h)
           | Some _ ->
-            DList_set (filterd _A1 (fun x -> member (_A1, _A2) x h) dxs1))
-    | i, Set_Monad xs -> Set_Monad (filtera (fun x -> member (_A1, _A2) x i) xs)
-    | Set_Monad xs, i -> Set_Monad (filtera (fun x -> member (_A1, _A2) x i) xs)
+            DList_set (filterc _A1 (fun x -> member (_A1, _A2) x h) dxs1))
+    | i, Set_Monad xs -> Set_Monad (filter (fun x -> member (_A1, _A2) x i) xs)
+    | Set_Monad xs, i -> Set_Monad (filter (fun x -> member (_A1, _A2) x i) xs)
     | j, Collect_set a -> Collect_set (fun x -> a x && member (_A1, _A2) x j)
     | Collect_set a, j -> Collect_set (fun x -> a x && member (_A1, _A2) x j)
 and sup_seta (_A1, _A2)
@@ -945,7 +945,7 @@ let rec init _A xa = rbt_init (impl_ofa _A xa);;
 
 let rec collect _A
   p = (match cEnum _A with None -> Collect_set p
-        | Some (enum, _) -> Set_Monad (filtera p enum));;
+        | Some (enum, _) -> Set_Monad (filter p enum));;
 
 let rec less_eq_set (_A1, _A2, _A3)
   x0 c = match x0, c with
@@ -1587,6 +1587,14 @@ and cless_eq_set (_A1, _A2, _A3, _A4)
 let rec ccompare_set (_A1, _A2, _A3, _A4) =
   ({ccompare = ccompare_seta (_A1, _A2, _A3, _A4)} : 'a set ccompare);;
 
+let rec equal_lista _A
+  x0 x1 = match x0, x1 with [], x21 :: x22 -> false
+    | x21 :: x22, [] -> false
+    | x21 :: x22, y21 :: y22 -> eq _A x21 y21 && equal_lista _A x22 y22
+    | [], [] -> true;;
+
+let rec equal_list _A = ({equal = equal_lista _A} : ('a list) equal);;
+
 let rec equality_list
   eq_a x1 x2 = match eq_a, x1, x2 with
     eq_a, x :: xa, y :: ya -> eq_a x y && equality_list eq_a xa ya
@@ -1831,9 +1839,75 @@ type 'a eval_res = Fin of ('a list) set | Infin | Wf_error;;
 
 type ('b, 'a) comp_fun_idem = Abs_comp_fun_idem of ('b -> 'a -> 'a);;
 
-let rec filter_comp_minus
-  c t1 t2 =
-    filtera (fun (k, _) -> is_none (rbt_comp_lookup c t2 k)) (entries t1);;
+let rec rem_nth
+  uu x1 = match uu, x1 with uu, [] -> []
+    | n, x :: xs ->
+        (if equal_nata n zero_nat then xs
+          else x :: rem_nth (minus_nat n one_nat) xs);;
+
+let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
+
+let rec fo_nmlz_rec (_A1, _A2, _A3)
+  i m ad x3 = match i, m, ad, x3 with i, m, ad, [] -> []
+    | i, m, ad, Inl x :: xs ->
+        (if member (_A1, _A2) x ad
+          then Inl x :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs
+          else (match m (Inl x)
+                 with None ->
+                   Inr i ::
+                     fo_nmlz_rec (_A1, _A2, _A3) (suc i)
+                       (fun_upd (equal_sum _A3 equal_nat) m (Inl x) (Some i)) ad
+                       xs
+                 | Some j -> Inr j :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs))
+    | i, m, ad, Inr n :: xs ->
+        (match m (Inr n)
+          with None ->
+            Inr i ::
+              fo_nmlz_rec (_A1, _A2, _A3) (suc i)
+                (fun_upd (equal_sum _A3 equal_nat) m (Inr n) (Some i)) ad xs
+          | Some j -> Inr j :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs);;
+
+let rec fo_nmlz (_A1, _A2, _A3)
+  = fo_nmlz_rec (_A1, _A2, _A3) zero_nat (fun _ -> None);;
+
+let rec list_remdups
+  equal x1 = match equal, x1 with
+    equal, x :: xs ->
+      (if list_member equal xs x then list_remdups equal xs
+        else x :: list_remdups equal xs)
+    | equal, [] -> [];;
+
+let rec length _A xa = size_list (list_of_dlist _A xa);;
+
+let rec card (_A1, _A2, _A3)
+  = function
+    Complement a ->
+      (let aa = card (_A1, _A2, _A3) a in
+       let s = of_phantom (card_UNIV _A1) in
+        (if less_nat zero_nat s then minus_nat s aa
+          else (if finite (_A1.finite_UNIV_card_UNIV, _A2, _A3) a then zero_nat
+                 else failwith "card Complement: infinite"
+                        (fun _ -> card (_A1, _A2, _A3) (Complement a)))))
+    | Set_Monad xs ->
+        (match ceq _A2
+          with None ->
+            failwith "card Set_Monad: ceq = None"
+              (fun _ -> card (_A1, _A2, _A3) (Set_Monad xs))
+          | Some eq -> size_list (list_remdups eq xs))
+    | RBT_set rbt ->
+        (match ccompare _A3
+          with None ->
+            failwith "card RBT_set: ccompare = None"
+              (fun _ -> card (_A1, _A2, _A3) (RBT_set rbt))
+          | Some _ -> size_list (keysb _A3 rbt))
+    | DList_set dxs ->
+        (match ceq _A2
+          with None ->
+            failwith "card DList_set: ceq = None"
+              (fun _ -> card (_A1, _A2, _A3) (DList_set dxs))
+          | Some _ -> length _A2 dxs);;
+
+let rec fun_upda equal f aa b a = (if equal aa a then b else f a);;
 
 let rec balance_right
   a k x xa3 = match a, k, x, xa3 with
@@ -1928,6 +2002,240 @@ and rbt_comp_del_from_right
 
 let rec rbt_comp_delete c k t = paint B (rbt_comp_del c k t);;
 
+let rec delete _A
+  xb xc =
+    Mapping_RBTa (rbt_comp_delete (the (ccompare _A)) xb (impl_ofa _A xc));;
+
+let rec list_remove1
+  equal x xa2 = match equal, x, xa2 with
+    equal, x, y :: xs ->
+      (if equal x y then xs else y :: list_remove1 equal x xs)
+    | equal, x, [] -> [];;
+
+let rec removea _A
+  xb xc = Abs_dlist (list_remove1 (the (ceq _A)) xb (list_of_dlist _A xc));;
+
+let rec insert (_A1, _A2)
+  xa x1 = match xa, x1 with
+    xa, Complement x -> Complement (remove (_A1, _A2) xa x)
+    | x, RBT_set rbt ->
+        (match ccompare _A2
+          with None ->
+            failwith "insert RBT_set: ccompare = None"
+              (fun _ -> insert (_A1, _A2) x (RBT_set rbt))
+          | Some _ -> RBT_set (insertb _A2 x () rbt))
+    | x, DList_set dxs ->
+        (match ceq _A1
+          with None ->
+            failwith "insert DList_set: ceq = None"
+              (fun _ -> insert (_A1, _A2) x (DList_set dxs))
+          | Some _ -> DList_set (inserta _A1 x dxs))
+    | x, Set_Monad xs -> Set_Monad (x :: xs)
+    | x, Collect_set a ->
+        (match ceq _A1
+          with None ->
+            failwith "insert Collect_set: ceq = None"
+              (fun _ -> insert (_A1, _A2) x (Collect_set a))
+          | Some eq -> Collect_set (fun_upda eq a x true))
+and remove (_A1, _A2)
+  x xa1 = match x, xa1 with
+    x, Complement a -> Complement (insert (_A1, _A2) x a)
+    | x, RBT_set rbt ->
+        (match ccompare _A2
+          with None ->
+            failwith "remove RBT_set: ccompare = None"
+              (fun _ -> remove (_A1, _A2) x (RBT_set rbt))
+          | Some _ -> RBT_set (delete _A2 x rbt))
+    | x, DList_set dxs ->
+        (match ceq _A1
+          with None ->
+            failwith "remove DList_set: ceq = None"
+              (fun _ -> remove (_A1, _A2) x (DList_set dxs))
+          | Some _ -> DList_set (removea _A1 x dxs))
+    | x, Collect_set a ->
+        (match ceq _A1
+          with None ->
+            failwith "remove Collect: ceq = None"
+              (fun _ -> remove (_A1, _A2) x (Collect_set a))
+          | Some eq -> Collect_set (fun_upda eq a x false));;
+
+let rec add_to_rbt_comp (_B1, _B2, _B3)
+  c = (fun (a, b) t ->
+        (match rbt_comp_lookup c t a
+          with None ->
+            rbt_comp_insert c a (insert (_B1, _B2) b (bot_set (_B1, _B2, _B3)))
+              t
+          | Some x -> rbt_comp_insert c a (insert (_B1, _B2) b x) t));;
+
+let rec cluster_rbt_comp (_B1, _B2, _B3)
+  c f t =
+    folda (fun b _ ta ->
+            (match f b with None -> ta
+              | Some a -> add_to_rbt_comp (_B1, _B2, _B3) c (a, b) ta))
+      t Empty;;
+
+let rec mapping_of_cluster (_B1, _B2, _B3) _A
+  xb xc =
+    Mapping_RBTa (cluster_rbt_comp (_B1, _B2, _B3) (the (ccompare _A)) xb xc);;
+
+let rec cluster (_A1, _A2, _A3) _B
+  f (RBT_set t) =
+    (match ccompare _B
+      with None ->
+        failwith "cluster: ccompare = None"
+          (fun _ -> cluster (_A1, _A2, _A3) _B f (RBT_set t))
+      | Some _ ->
+        (match ccompare _A2
+          with None ->
+            failwith "cluster: ccompare = None"
+              (fun _ -> cluster (_A1, _A2, _A3) _B f (RBT_set t))
+          | Some _ ->
+            RBT_Mapping
+              (mapping_of_cluster (_A1, _A2, _A3) _B f (impl_ofa _A2 t))));;
+
+let rec impl_of (Alist x) = x;;
+
+let rec filtera xb xc = Alist (filter xb (impl_of xc));;
+
+let rec filterb _A
+  p x1 = match p, x1 with
+    p, RBT_Mapping t ->
+      (match ccompare _A
+        with None ->
+          failwith "filter RBT_Mapping: ccompare = None"
+            (fun _ -> filterb _A p (RBT_Mapping t))
+        | Some _ -> RBT_Mapping (filterd _A (fun (a, b) -> p a b) t))
+    | p, Assoc_List_Mapping al ->
+        Assoc_List_Mapping (filtera (fun (a, b) -> p a b) al)
+    | p, Mapping m ->
+        Mapping
+          (fun k ->
+            (match m k with None -> None
+              | Some v -> (if p k v then Some v else None)));;
+
+let rec pos _A
+  a x1 = match a, x1 with a, [] -> None
+    | a, x :: xs ->
+        (if eq _A a x then Some zero_nat
+          else (match pos _A a xs with None -> None | Some n -> Some (suc n)));;
+
+let rec foldl f a x2 = match f, a, x2 with f, a, [] -> a
+                | f, a, x :: xs -> foldl f (f a x) xs;;
+
+let rec set_aux (_A1, _A2)
+  = function Set_Monada -> (fun a -> Set_Monad a)
+    | Set_Choose ->
+        (match ccompare _A2
+          with None ->
+            (match ceq _A1 with None -> (fun a -> Set_Monad a)
+              | Some _ ->
+                foldl (fun s x -> insert (_A1, _A2) x s)
+                  (DList_set (emptyb _A1)))
+          | Some _ ->
+            foldl (fun s x -> insert (_A1, _A2) x s) (RBT_set (emptyc _A2)))
+    | impl ->
+        foldl (fun s x -> insert (_A1, _A2) x s) (set_empty (_A1, _A2) impl);;
+
+let rec set (_A1, _A2, _A3)
+  xs = set_aux (_A1, _A2) (of_phantom (set_impl _A3)) xs;;
+
+let rec map
+  f x1 = match f, x1 with f, Empty -> Empty
+    | f, Branch (c, lt, k, v, rt) -> Branch (c, map f lt, k, f k v, map f rt);;
+
+let rec mapb _A xb xc = Mapping_RBTa (map xb (impl_ofa _A xc));;
+
+let rec keysc (_A1, _A2, _A3) xa = set (_A1, _A2, _A3) (mapa fst (impl_of xa));;
+
+let rec keys (_A1, _A2, _A3, _A4)
+  = function RBT_Mapping t -> RBT_set (mapb _A3 (fun _ _ -> ()) t)
+    | Assoc_List_Mapping al -> keysc (_A2, _A3, _A4) al
+    | Mapping m -> collect _A1 (fun k -> not (is_none (m k)));;
+
+let rec eval_forall (_A1, _A2, _A3, _A4)
+  i ns (ad, (uu, x)) =
+    (match pos equal_nat i ns with None -> (ad, (size_list ns, x))
+      | Some j ->
+        (let n = card (_A1, _A2, _A3) ad in
+          (ad, (minus_nat (size_list ns) one_nat,
+                 keys (cenum_list, (ceq_list (ceq_sum _A2 ceq_nat)),
+                        (ccompare_list (ccompare_sum _A3 ccompare_nat)),
+                        set_impl_list)
+                   (filterb (ccompare_list (ccompare_sum _A3 ccompare_nat))
+                     (fun t z ->
+                       less_eq_nat
+                         (plus_nat
+                           (plus_nat n
+                             (card (card_UNIV_nat, ceq_nat, ccompare_nat)
+                               (set (ceq_nat, ccompare_nat, set_impl_nat)
+                                 (map_filter
+                                   (fun a ->
+                                     (match a with Inl _ -> None
+                                       | Inr aa -> Some aa))
+                                   t))))
+                           one_nat)
+                         (card (card_UNIV_list,
+                                 (ceq_list (ceq_sum _A2 ceq_nat)),
+                                 (ccompare_list
+                                   (ccompare_sum _A3 ccompare_nat)))
+                           z))
+                     (cluster
+                       ((ceq_list (ceq_sum _A2 ceq_nat)),
+                         (ccompare_list (ccompare_sum _A3 ccompare_nat)),
+                         set_impl_list)
+                       (ccompare_list (ccompare_sum _A3 ccompare_nat))
+                       (comp (fun a -> Some a)
+                         (fun ts -> fo_nmlz (_A2, _A3, _A4) ad (rem_nth j ts)))
+                       x))))));;
+
+let rec foldb _A x xc = folda (fun a _ -> x a) (impl_ofa _A xc);;
+
+let rec image (_A1, _A2) (_B1, _B2, _B3)
+  h x1 = match h, x1 with
+    h, RBT_set rbt ->
+      (match ccompare _A2
+        with None ->
+          failwith "image RBT_set: ccompare = None"
+            (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) h (RBT_set rbt))
+        | Some _ ->
+          foldb _A2 (comp (insert (_B1, _B2)) h) rbt (bot_set (_B1, _B2, _B3)))
+    | g, DList_set dxs ->
+        (match ceq _A1
+          with None ->
+            failwith "image DList_set: ceq = None"
+              (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) g (DList_set dxs))
+          | Some _ ->
+            foldc _A1 (comp (insert (_B1, _B2)) g) dxs
+              (bot_set (_B1, _B2, _B3)))
+    | f, Complement (Complement b) -> image (_A1, _A2) (_B1, _B2, _B3) f b
+    | f, Collect_set a ->
+        failwith "image Collect_set"
+          (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) f (Collect_set a))
+    | f, Set_Monad xs -> Set_Monad (mapa f xs);;
+
+let rec eval_exists (_A1, _A2, _A3)
+  i ns (ad, (uu, x)) =
+    (match pos equal_nat i ns with None -> (ad, (size_list ns, x))
+      | Some j ->
+        (ad, (minus_nat (size_list ns) one_nat,
+               image ((ceq_list (ceq_sum _A1 ceq_nat)),
+                       (ccompare_list (ccompare_sum _A2 ccompare_nat)))
+                 ((ceq_list (ceq_sum _A1 ceq_nat)),
+                   (ccompare_list (ccompare_sum _A2 ccompare_nat)),
+                   set_impl_list)
+                 (fo_nmlz (_A1, _A2, _A3) ad)
+                 (image
+                   ((ceq_list (ceq_sum _A1 ceq_nat)),
+                     (ccompare_list (ccompare_sum _A2 ccompare_nat)))
+                   ((ceq_list (ceq_sum _A1 ceq_nat)),
+                     (ccompare_list (ccompare_sum _A2 ccompare_nat)),
+                     set_impl_list)
+                   (rem_nth j) x))));;
+
+let rec filter_comp_minus
+  c t1 t2 =
+    filter (fun (k, _) -> is_none (rbt_comp_lookup c t2 k)) (entries t1);;
+
 let rec small_rbt t = less_nat (bheight t) (nat_of_integer (Z.of_int 4));;
 
 let rec comp_minus
@@ -1958,8 +2266,6 @@ let rec minus_set (_A1, _A2)
     | a, b -> inf_seta (_A1, _A2) a (uminus_set b);;
 
 let rec comp_fun_idem_apply (Abs_comp_fun_idem x) = x;;
-
-let rec foldb _A x xc = folda (fun a _ -> x a) (impl_ofa _A xc);;
 
 let rec set_fold_cfi (_A1, _A2)
   f b x2 = match f, b, x2 with
@@ -1999,90 +2305,6 @@ let rec sup_setb (_A1, _A2, _A3, _A4, _A5)
                (bot_set (_A3, _A4.ccompare_cproper_interval, _A5)) a
         else failwith "Sup: infinite"
                (fun _ -> sup_setb (_A1, _A2, _A3, _A4, _A5) a));;
-
-let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
-
-let rec fun_upda equal f aa b a = (if equal aa a then b else f a);;
-
-let rec delete _A
-  xb xc =
-    Mapping_RBTa (rbt_comp_delete (the (ccompare _A)) xb (impl_ofa _A xc));;
-
-let rec list_remove1
-  equal x xa2 = match equal, x, xa2 with
-    equal, x, y :: xs ->
-      (if equal x y then xs else y :: list_remove1 equal x xs)
-    | equal, x, [] -> [];;
-
-let rec removea _A
-  xb xc = Abs_dlist (list_remove1 (the (ceq _A)) xb (list_of_dlist _A xc));;
-
-let rec remove (_A1, _A2)
-  x xa1 = match x, xa1 with
-    x, Complement a -> Complement (insert (_A1, _A2) x a)
-    | x, RBT_set rbt ->
-        (match ccompare _A2
-          with None ->
-            failwith "remove RBT_set: ccompare = None"
-              (fun _ -> remove (_A1, _A2) x (RBT_set rbt))
-          | Some _ -> RBT_set (delete _A2 x rbt))
-    | x, DList_set dxs ->
-        (match ceq _A1
-          with None ->
-            failwith "remove DList_set: ceq = None"
-              (fun _ -> remove (_A1, _A2) x (DList_set dxs))
-          | Some _ -> DList_set (removea _A1 x dxs))
-    | x, Collect_set a ->
-        (match ceq _A1
-          with None ->
-            failwith "remove Collect: ceq = None"
-              (fun _ -> remove (_A1, _A2) x (Collect_set a))
-          | Some eq -> Collect_set (fun_upda eq a x false))
-and insert (_A1, _A2)
-  xa x1 = match xa, x1 with
-    xa, Complement x -> Complement (remove (_A1, _A2) xa x)
-    | x, RBT_set rbt ->
-        (match ccompare _A2
-          with None ->
-            failwith "insert RBT_set: ccompare = None"
-              (fun _ -> insert (_A1, _A2) x (RBT_set rbt))
-          | Some _ -> RBT_set (insertb _A2 x () rbt))
-    | x, DList_set dxs ->
-        (match ceq _A1
-          with None ->
-            failwith "insert DList_set: ceq = None"
-              (fun _ -> insert (_A1, _A2) x (DList_set dxs))
-          | Some _ -> DList_set (inserta _A1 x dxs))
-    | x, Set_Monad xs -> Set_Monad (x :: xs)
-    | x, Collect_set a ->
-        (match ceq _A1
-          with None ->
-            failwith "insert Collect_set: ceq = None"
-              (fun _ -> insert (_A1, _A2) x (Collect_set a))
-          | Some eq -> Collect_set (fun_upda eq a x true));;
-
-let rec image (_A1, _A2) (_B1, _B2, _B3)
-  h x1 = match h, x1 with
-    h, RBT_set rbt ->
-      (match ccompare _A2
-        with None ->
-          failwith "image RBT_set: ccompare = None"
-            (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) h (RBT_set rbt))
-        | Some _ ->
-          foldb _A2 (comp (insert (_B1, _B2)) h) rbt (bot_set (_B1, _B2, _B3)))
-    | g, DList_set dxs ->
-        (match ceq _A1
-          with None ->
-            failwith "image DList_set: ceq = None"
-              (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) g (DList_set dxs))
-          | Some _ ->
-            foldc _A1 (comp (insert (_B1, _B2)) g) dxs
-              (bot_set (_B1, _B2, _B3)))
-    | f, Complement (Complement b) -> image (_A1, _A2) (_B1, _B2, _B3) f b
-    | f, Collect_set a ->
-        failwith "image Collect_set"
-          (fun _ -> image (_A1, _A2) (_B1, _B2, _B3) f (Collect_set a))
-    | f, Set_Monad xs -> Set_Monad (mapa f xs);;
 
 let rec ad_agr_close_rec (_A1, _A2)
   i m ad x3 = match i, m, ad, x3 with
@@ -2170,43 +2392,6 @@ let rec exhaustive_fusion
         not (proper_interval None (Some x)) &&
           exhaustive_above_fusion proper_interval g x sa);;
 
-let rec list_remdups
-  equal x1 = match equal, x1 with
-    equal, x :: xs ->
-      (if list_member equal xs x then list_remdups equal xs
-        else x :: list_remdups equal xs)
-    | equal, [] -> [];;
-
-let rec length _A xa = size_list (list_of_dlist _A xa);;
-
-let rec card (_A1, _A2, _A3)
-  = function
-    Complement a ->
-      (let aa = card (_A1, _A2, _A3) a in
-       let s = of_phantom (card_UNIV _A1) in
-        (if less_nat zero_nat s then minus_nat s aa
-          else (if finite (_A1.finite_UNIV_card_UNIV, _A2, _A3) a then zero_nat
-                 else failwith "card Complement: infinite"
-                        (fun _ -> card (_A1, _A2, _A3) (Complement a)))))
-    | Set_Monad xs ->
-        (match ceq _A2
-          with None ->
-            failwith "card Set_Monad: ceq = None"
-              (fun _ -> card (_A1, _A2, _A3) (Set_Monad xs))
-          | Some eq -> size_list (list_remdups eq xs))
-    | RBT_set rbt ->
-        (match ccompare _A3
-          with None ->
-            failwith "card RBT_set: ccompare = None"
-              (fun _ -> card (_A1, _A2, _A3) (RBT_set rbt))
-          | Some _ -> size_list (keysb _A3 rbt))
-    | DList_set dxs ->
-        (match ceq _A2
-          with None ->
-            failwith "card DList_set: ceq = None"
-              (fun _ -> card (_A1, _A2, _A3) (DList_set dxs))
-          | Some _ -> length _A2 dxs);;
-
 let rec is_UNIV (_A1, _A2, _A3)
   = function
     RBT_set rbt ->
@@ -2268,45 +2453,6 @@ let rec ad_agr_close_set (_A1, _A2, _A3)
                      set_impl_list)),
                  set_impl_set)
                (ad_agr_close (_A2, _A3.ccompare_cproper_interval) ad) x));;
-
-let rec mapping_join _B
-  f (RBT_Mapping t) (RBT_Mapping u) =
-    (match ccompare _B
-      with None ->
-        failwith "mapping_join RBT_Mapping: ccompare = None"
-          (fun _ -> mapping_join _B f (RBT_Mapping t) (RBT_Mapping u))
-      | Some _ -> RBT_Mapping (meet _B (fun _ -> f) t u));;
-
-let rec insort_key _B
-  f x xa2 = match f, x, xa2 with f, x, [] -> [x]
-    | f, x, y :: ys ->
-        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
-          then x :: y :: ys else y :: insort_key _B f x ys);;
-
-let rec foldr f x1 = match f, x1 with f, [] -> id
-                | f, x :: xs -> comp (f x) (foldr f xs);;
-
-let rec sort_key _B f xs = foldr (insort_key _B f) xs [];;
-
-let rec foldl f a x2 = match f, a, x2 with f, a, [] -> a
-                | f, a, x :: xs -> foldl f (f a x) xs;;
-
-let rec set_aux (_A1, _A2)
-  = function Set_Monada -> (fun a -> Set_Monad a)
-    | Set_Choose ->
-        (match ccompare _A2
-          with None ->
-            (match ceq _A1 with None -> (fun a -> Set_Monad a)
-              | Some _ ->
-                foldl (fun s x -> insert (_A1, _A2) x s)
-                  (DList_set (emptyb _A1)))
-          | Some _ ->
-            foldl (fun s x -> insert (_A1, _A2) x s) (RBT_set (emptyc _A2)))
-    | impl ->
-        foldl (fun s x -> insert (_A1, _A2) x s) (set_empty (_A1, _A2) impl);;
-
-let rec set (_A1, _A2, _A3)
-  xs = set_aux (_A1, _A2) (of_phantom (set_impl _A3)) xs;;
 
 let rec upt i j = (if less_nat i j then i :: upt (suc i) j else []);;
 
@@ -2405,28 +2551,82 @@ let rec ext_tuple (_A1, _A2, _A3)
                      asa)))
                (size_list fv_sub_comp)));;
 
-let rec fo_nmlz_rec (_A1, _A2, _A3)
-  i m ad x3 = match i, m, ad, x3 with i, m, ad, [] -> []
-    | i, m, ad, Inl x :: xs ->
-        (if member (_A1, _A2) x ad
-          then Inl x :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs
-          else (match m (Inl x)
-                 with None ->
-                   Inr i ::
-                     fo_nmlz_rec (_A1, _A2, _A3) (suc i)
-                       (fun_upd (equal_sum _A3 equal_nat) m (Inl x) (Some i)) ad
-                       xs
-                 | Some j -> Inr j :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs))
-    | i, m, ad, Inr n :: xs ->
-        (match m (Inr n)
-          with None ->
-            Inr i ::
-              fo_nmlz_rec (_A1, _A2, _A3) (suc i)
-                (fun_upd (equal_sum _A3 equal_nat) m (Inr n) (Some i)) ad xs
-          | Some j -> Inr j :: fo_nmlz_rec (_A1, _A2, _A3) i m ad xs);;
+let rec ext_tuple_set (_A1, _A2, _A3, _A4)
+  ad nsa ns x =
+    (if null ns then x
+      else image ((ceq_list (ceq_sum _A1 ceq_nat)),
+                   (ccompare_list (ccompare_sum _A2 ccompare_nat)))
+             ((ceq_list (ceq_sum _A1 ceq_nat)),
+               (ccompare_list (ccompare_sum _A2 ccompare_nat)), set_impl_list)
+             (fo_nmlz (_A1, _A2, _A3) ad)
+             (sup_setb
+               (finite_UNIV_list, cenum_list, (ceq_list (ceq_sum _A1 ceq_nat)),
+                 (cproper_interval_list (ccompare_sum _A2 ccompare_nat)),
+                 set_impl_list)
+               (image
+                 ((ceq_list (ceq_sum _A1 ceq_nat)),
+                   (ccompare_list (ccompare_sum _A2 ccompare_nat)))
+                 ((ceq_set
+                    (cenum_list, (ceq_list (ceq_sum _A1 ceq_nat)),
+                      (cproper_interval_list
+                        (ccompare_sum _A2
+                          ccompare_nat)).ccompare_cproper_interval)),
+                   (ccompare_set
+                     (finite_UNIV_list, (ceq_list (ceq_sum _A1 ceq_nat)),
+                       (cproper_interval_list (ccompare_sum _A2 ccompare_nat)),
+                       set_impl_list)),
+                   set_impl_set)
+                 (ext_tuple (_A1, _A2, _A4) ad nsa ns) x)));;
 
-let rec fo_nmlz (_A1, _A2, _A3)
-  = fo_nmlz_rec (_A1, _A2, _A3) zero_nat (fun _ -> None);;
+let rec entriesa _A xa = entries (impl_ofa _A xa);;
+
+let rec set_of_idx (_A1, _A2, _A3) (_B1, _B2, _B3, _B4, _B5)
+  (RBT_Mapping t) =
+    (match ccompare _A2
+      with None ->
+        failwith "set_of_idx RBT_Mapping: ccompare = None"
+          (fun _ ->
+            set_of_idx (_A1, _A2, _A3) (_B1, _B2, _B3, _B4, _B5)
+              (RBT_Mapping t))
+      | Some _ ->
+        sup_setb (_B1, _B2, _B3, _B4, _B5)
+          (image
+            ((ceq_prod _A1 (ceq_set (_B2, _B3, _B4.ccompare_cproper_interval))),
+              (ccompare_prod _A2 (ccompare_set (_B1, _B3, _B4, _B5))))
+            ((ceq_set (_B2, _B3, _B4.ccompare_cproper_interval)),
+              (ccompare_set (_B1, _B3, _B4, _B5)), set_impl_set)
+            snd (set ((ceq_prod _A1
+                        (ceq_set (_B2, _B3, _B4.ccompare_cproper_interval))),
+                       (ccompare_prod _A2 (ccompare_set (_B1, _B3, _B4, _B5))),
+                       (set_impl_prod _A3 set_impl_set))
+                  (entriesa _A2 t))));;
+
+let rec proj_tuple
+  x0 mys = match x0, mys with [], mys -> []
+    | v :: va, [] -> []
+    | n :: ns, (m, y) :: mys ->
+        (if less_nat m n then proj_tuple (n :: ns) mys
+          else (if equal_nata m n then y :: proj_tuple ns mys
+                 else proj_tuple ns ((m, y) :: mys)));;
+
+let rec mapping_join _B
+  f (RBT_Mapping t) (RBT_Mapping u) =
+    (match ccompare _B
+      with None ->
+        failwith "mapping_join RBT_Mapping: ccompare = None"
+          (fun _ -> mapping_join _B f (RBT_Mapping t) (RBT_Mapping u))
+      | Some _ -> RBT_Mapping (meet _B (fun _ -> f) t u));;
+
+let rec insort_key _B
+  f x xa2 = match f, x, xa2 with f, x, [] -> [x]
+    | f, x, y :: ys ->
+        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
+          then x :: y :: ys else y :: insort_key _B f x ys);;
+
+let rec foldr f x1 = match f, x1 with f, [] -> id
+                | f, x :: xs -> comp (f x) (foldr f xs);;
+
+let rec sort_key _B f xs = foldr (insort_key _B f) xs [];;
 
 let rec isl = function Inl x1 -> true
               | Inr x2 -> false;;
@@ -2437,7 +2637,7 @@ let rec membera _A x0 y = match x0, y with [], y -> false
 let rec eval_conj_tuple (_A1, _A2, _A3, _A4)
   ad ns_phi ns_psi xs ys =
     (let cxs =
-       filtera (fun (n, x) -> not (membera equal_nat ns_psi n) && isl x)
+       filter (fun (n, x) -> not (membera equal_nat ns_psi n) && isl x)
          (zip ns_phi xs)
        in
      let nxs =
@@ -2449,7 +2649,7 @@ let rec eval_conj_tuple (_A1, _A2, _A3, _A4)
          (zip ns_phi xs)
        in
      let cys =
-       filtera (fun (n, y) -> not (membera equal_nat ns_phi n) && isl y)
+       filter (fun (n, y) -> not (membera equal_nat ns_phi n) && isl y)
          (zip ns_psi ys)
        in
      let nys =
@@ -2520,80 +2720,75 @@ let rec eval_conj_set (_A1, _A2, _A3, _A4)
               (eval_conj_tuple (_A1, _A2, _A3, _A4) ad ns_phi ns_psi xs) x_psi))
         x_phi);;
 
-let rec entriesa _A xa = entries (impl_ofa _A xa);;
+let rec idx_join (_A1, _A2, _A3, _A4)
+  ad ns ns_phi x_phi ns_psi x_psi =
+    (let idx_phi =
+       cluster
+         ((ceq_list (ceq_sum _A1 ceq_nat)),
+           (ccompare_list (ccompare_sum _A2 ccompare_nat)), set_impl_list)
+         (ccompare_list (ccompare_sum _A2 ccompare_nat))
+         (comp (fun a -> Some a)
+           (fun xs ->
+             fo_nmlz (_A1, _A2, _A3) ad (proj_tuple ns (zip ns_phi xs))))
+         x_phi
+       in
+     let idx_psi =
+       cluster
+         ((ceq_list (ceq_sum _A1 ceq_nat)),
+           (ccompare_list (ccompare_sum _A2 ccompare_nat)), set_impl_list)
+         (ccompare_list (ccompare_sum _A2 ccompare_nat))
+         (comp (fun a -> Some a)
+           (fun ys ->
+             fo_nmlz (_A1, _A2, _A3) ad (proj_tuple ns (zip ns_psi ys))))
+         x_psi
+       in
+      set_of_idx
+        ((ceq_list (ceq_sum _A1 ceq_nat)),
+          (ccompare_list (ccompare_sum _A2 ccompare_nat)), set_impl_list)
+        (finite_UNIV_list, cenum_list, (ceq_list (ceq_sum _A1 ceq_nat)),
+          (cproper_interval_list (ccompare_sum _A2 ccompare_nat)),
+          set_impl_list)
+        (mapping_join (ccompare_list (ccompare_sum _A2 ccompare_nat))
+          (fun x_phia ->
+            eval_conj_set (_A1, _A2, _A3, _A4) ad ns_phi x_phia ns_psi)
+          idx_phi idx_psi));;
 
-let rec set_of_idx (_A1, _A2, _A3) (_B1, _B2, _B3, _B4, _B5)
-  (RBT_Mapping t) =
-    (match ccompare _A2
-      with None ->
-        failwith "set_of_idx RBT_Mapping: ccompare = None"
-          (fun _ ->
-            set_of_idx (_A1, _A2, _A3) (_B1, _B2, _B3, _B4, _B5)
-              (RBT_Mapping t))
-      | Some _ ->
-        sup_setb (_B1, _B2, _B3, _B4, _B5)
-          (image
-            ((ceq_prod _A1 (ceq_set (_B2, _B3, _B4.ccompare_cproper_interval))),
-              (ccompare_prod _A2 (ccompare_set (_B1, _B3, _B4, _B5))))
-            ((ceq_set (_B2, _B3, _B4.ccompare_cproper_interval)),
-              (ccompare_set (_B1, _B3, _B4, _B5)), set_impl_set)
-            snd (set ((ceq_prod _A1
-                        (ceq_set (_B2, _B3, _B4.ccompare_cproper_interval))),
-                       (ccompare_prod _A2 (ccompare_set (_B1, _B3, _B4, _B5))),
-                       (set_impl_prod _A3 set_impl_set))
-                  (entriesa _A2 t))));;
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
 
-let rec proj_tuple
-  x0 mys = match x0, mys with [], mys -> []
-    | v :: va, [] -> []
-    | n :: ns, (m, y) :: mys ->
-        (if less_nat m n then proj_tuple (n :: ns) mys
-          else (if equal_nata m n then y :: proj_tuple ns mys
-                 else proj_tuple ns ((m, y) :: mys)));;
+let rec map_valuesa
+  xb xc = Alist (mapa (fun (x, y) -> (x, xb x y)) (impl_of xc));;
 
-let rec add_to_rbt_comp (_B1, _B2, _B3)
-  c = (fun (a, b) t ->
-        (match rbt_comp_lookup c t a
-          with None ->
-            rbt_comp_insert c a (insert (_B1, _B2) b (bot_set (_B1, _B2, _B3)))
-              t
-          | Some x -> rbt_comp_insert c a (insert (_B1, _B2) b x) t));;
+let rec map_values _A
+  f x1 = match f, x1 with
+    f, RBT_Mapping t ->
+      (match ccompare _A
+        with None ->
+          failwith "map_values RBT_Mapping: ccompare = None"
+            (fun _ -> map_values _A f (RBT_Mapping t))
+        | Some _ -> RBT_Mapping (mapb _A f t))
+    | f, Assoc_List_Mapping al -> Assoc_List_Mapping (map_valuesa f al)
+    | f, Mapping m -> Mapping (fun k -> map_option (f k) (m k));;
 
-let rec cluster_rbt_comp (_B1, _B2, _B3)
-  c f t =
-    folda (fun b _ ta ->
-            (match f b with None -> ta
-              | Some a -> add_to_rbt_comp (_B1, _B2, _B3) c (a, b) ta))
-      t Empty;;
+let rec map_of _A
+  x0 k = match x0, k with
+    (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k)
+    | [], k -> None;;
 
-let rec mapping_of_cluster (_B1, _B2, _B3) _A
-  xb xc =
-    Mapping_RBTa (cluster_rbt_comp (_B1, _B2, _B3) (the (ccompare _A)) xb xc);;
+let rec lookup _A xa = map_of _A (impl_of xa);;
 
-let rec cluster (_A1, _A2, _A3) _B
-  f (RBT_set t) =
-    (match ccompare _B
-      with None ->
-        failwith "cluster: ccompare = None"
-          (fun _ -> cluster (_A1, _A2, _A3) _B f (RBT_set t))
-      | Some _ ->
-        (match ccompare _A2
-          with None ->
-            failwith "cluster: ccompare = None"
-              (fun _ -> cluster (_A1, _A2, _A3) _B f (RBT_set t))
-          | Some _ ->
-            RBT_Mapping
-              (mapping_of_cluster (_A1, _A2, _A3) _B f (impl_ofa _A2 t))));;
+let rec lookupa (_A1, _A2) = function RBT_Mapping t -> lookupb _A1 t
+                             | Assoc_List_Mapping al -> lookup _A2 al;;
 
-let rec eval_conj_idx (_A1, _A2, _A3, _A4, _A5)
+let rec eval_ajoin (_A1, _A2, _A3, _A4, _A5)
   ns_phi (aD_phi, (uu, x_phi)) ns_psi (aD_psi, (uv, x_psi)) =
     (let ad = sup_seta (_A2, _A3.ccompare_cproper_interval) aD_phi aD_psi in
-     let ada = inf_seta (_A2, _A3.ccompare_cproper_interval) aD_phi aD_psi in
      let aD_Delta_phi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_phi
        in
      let aD_Delta_psi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_psi
        in
-     let ns = filtera (membera equal_nat ns_psi) ns_phi in
+     let ns = filter (membera equal_nat ns_psi) ns_phi in
+     let ns_phia = filter (fun n -> not (membera equal_nat ns_phi n)) ns_psi in
      let idx_phi =
        cluster
          ((ceq_list (ceq_sum _A2 ceq_nat)),
@@ -2604,9 +2799,9 @@ let rec eval_conj_idx (_A1, _A2, _A3, _A4, _A5)
            (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
          (comp (fun a -> Some a)
            (fun xs ->
-             fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) ada
+             fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) aD_psi
                (proj_tuple ns (zip ns_phi xs))))
-         x_phi
+         (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_phi x_phi)
        in
      let idx_psi =
        cluster
@@ -2618,43 +2813,14 @@ let rec eval_conj_idx (_A1, _A2, _A3, _A4, _A5)
            (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
          (comp (fun a -> Some a)
            (fun ys ->
-             fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) ada
+             fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) aD_psi
                (proj_tuple ns (zip ns_psi ys))))
          x_psi
        in
-     let join =
-       mapping_join
-         (ccompare_list
-           (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
-         (fun x_phia x_psia ->
-           (let idx_phia =
-              cluster
-                ((ceq_list (ceq_sum _A2 ceq_nat)),
-                  (ccompare_list
-                    (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)),
-                  set_impl_list)
-                (ccompare_list
-                  (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
-                (comp (fun a -> Some a)
-                  (fun xs ->
-                    fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) ad
-                      (proj_tuple ns (zip ns_phi xs))))
-                (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_phi x_phia)
-              in
-            let idx_psia =
-              cluster
-                ((ceq_list (ceq_sum _A2 ceq_nat)),
-                  (ccompare_list
-                    (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)),
-                  set_impl_list)
-                (ccompare_list
-                  (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
-                (comp (fun a -> Some a)
-                  (fun ys ->
-                    fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) ad
-                      (proj_tuple ns (zip ns_psi ys))))
-                (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_psi x_psia)
-              in
+      (ad, (card (card_UNIV_nat, ceq_nat, ccompare_nat)
+              (sup_seta (ceq_nat, ccompare_nat)
+                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_phi)
+                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_psi)),
              set_of_idx
                ((ceq_list (ceq_sum _A2 ceq_nat)),
                  (ccompare_list
@@ -2664,198 +2830,44 @@ let rec eval_conj_idx (_A1, _A2, _A3, _A4, _A5)
                  (cproper_interval_list
                    (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)),
                  set_impl_list)
-               (mapping_join
+               (map_values
                  (ccompare_list
                    (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat))
-                 (fun x_phib ->
-                   eval_conj_set (_A2, _A3.ccompare_cproper_interval, _A4, _A5)
-                     ad ns_phi x_phib ns_psi)
-                 idx_phia idx_psia)))
-         idx_phi idx_psi
-       in
-      (ad, (card (card_UNIV_nat, ceq_nat, ccompare_nat)
-              (sup_seta (ceq_nat, ccompare_nat)
-                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_phi)
-                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_psi)),
-             set_of_idx
-               ((ceq_list (ceq_sum _A2 ceq_nat)),
-                 (ccompare_list
-                   (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)),
-                 set_impl_list)
-               (finite_UNIV_list, cenum_list, (ceq_list (ceq_sum _A2 ceq_nat)),
-                 (cproper_interval_list
-                   (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)),
-                 set_impl_list)
-               join)));;
-
-let rec rem_nth
-  uu x1 = match uu, x1 with uu, [] -> []
-    | n, x :: xs ->
-        (if equal_nata n zero_nat then xs
-          else x :: rem_nth (minus_nat n one_nat) xs);;
-
-let rec impl_of (Alist x) = x;;
-
-let rec filterb xb xc = Alist (filtera xb (impl_of xc));;
-
-let rec filterc _A
-  p x1 = match p, x1 with
-    p, RBT_Mapping t ->
-      (match ccompare _A
-        with None ->
-          failwith "filter RBT_Mapping: ccompare = None"
-            (fun _ -> filterc _A p (RBT_Mapping t))
-        | Some _ -> RBT_Mapping (filtere _A (fun (a, b) -> p a b) t))
-    | p, Assoc_List_Mapping al ->
-        Assoc_List_Mapping (filterb (fun (a, b) -> p a b) al)
-    | p, Mapping m ->
-        Mapping
-          (fun k ->
-            (match m k with None -> None
-              | Some v -> (if p k v then Some v else None)));;
-
-let rec pos _A
-  a x1 = match a, x1 with a, [] -> None
-    | a, x :: xs ->
-        (if eq _A a x then Some zero_nat
-          else (match pos _A a xs with None -> None | Some n -> Some (suc n)));;
-
-let rec map
-  f x1 = match f, x1 with f, Empty -> Empty
-    | f, Branch (c, lt, k, v, rt) -> Branch (c, map f lt, k, f k v, map f rt);;
-
-let rec mapb _A xb xc = Mapping_RBTa (map xb (impl_ofa _A xc));;
-
-let rec keysc (_A1, _A2, _A3) xa = set (_A1, _A2, _A3) (mapa fst (impl_of xa));;
-
-let rec keys (_A1, _A2, _A3, _A4)
-  = function RBT_Mapping t -> RBT_set (mapb _A3 (fun _ _ -> ()) t)
-    | Assoc_List_Mapping al -> keysc (_A2, _A3, _A4) al
-    | Mapping m -> collect _A1 (fun k -> not (is_none (m k)));;
-
-let rec eval_forall (_A1, _A2, _A3, _A4)
-  i ns (ad, (uu, x)) =
-    (match pos equal_nat i ns with None -> (ad, (size_list ns, x))
-      | Some j ->
-        (let n = card (_A1, _A2, _A3) ad in
-          (ad, (minus_nat (size_list ns) one_nat,
-                 keys (cenum_list, (ceq_list (ceq_sum _A2 ceq_nat)),
-                        (ccompare_list (ccompare_sum _A3 ccompare_nat)),
-                        set_impl_list)
-                   (filterc (ccompare_list (ccompare_sum _A3 ccompare_nat))
-                     (fun t z ->
-                       less_eq_nat
-                         (plus_nat
-                           (plus_nat n
-                             (card (card_UNIV_nat, ceq_nat, ccompare_nat)
-                               (set (ceq_nat, ccompare_nat, set_impl_nat)
-                                 (map_filter
-                                   (fun a ->
-                                     (match a with Inl _ -> None
-                                       | Inr aa -> Some aa))
-                                   t))))
-                           one_nat)
-                         (card (card_UNIV_list,
-                                 (ceq_list (ceq_sum _A2 ceq_nat)),
-                                 (ccompare_list
-                                   (ccompare_sum _A3 ccompare_nat)))
-                           z))
-                     (cluster
-                       ((ceq_list (ceq_sum _A2 ceq_nat)),
-                         (ccompare_list (ccompare_sum _A3 ccompare_nat)),
-                         set_impl_list)
-                       (ccompare_list (ccompare_sum _A3 ccompare_nat))
-                       (comp (fun a -> Some a)
-                         (fun ts -> fo_nmlz (_A2, _A3, _A4) ad (rem_nth j ts)))
-                       x))))));;
-
-let rec eval_exists (_A1, _A2, _A3)
-  i ns (ad, (uu, x)) =
-    (match pos equal_nat i ns with None -> (ad, (size_list ns, x))
-      | Some j ->
-        (ad, (minus_nat (size_list ns) one_nat,
-               image ((ceq_list (ceq_sum _A1 ceq_nat)),
-                       (ccompare_list (ccompare_sum _A2 ccompare_nat)))
-                 ((ceq_list (ceq_sum _A1 ceq_nat)),
-                   (ccompare_list (ccompare_sum _A2 ccompare_nat)),
-                   set_impl_list)
-                 (fo_nmlz (_A1, _A2, _A3) ad)
-                 (image
-                   ((ceq_list (ceq_sum _A1 ceq_nat)),
-                     (ccompare_list (ccompare_sum _A2 ccompare_nat)))
-                   ((ceq_list (ceq_sum _A1 ceq_nat)),
-                     (ccompare_list (ccompare_sum _A2 ccompare_nat)),
-                     set_impl_list)
-                   (rem_nth j) x))));;
-
-let rec ext_tuple_set (_A1, _A2, _A3, _A4)
-  ad nsa ns x =
-    (if null ns then x
-      else image ((ceq_list (ceq_sum _A1 ceq_nat)),
-                   (ccompare_list (ccompare_sum _A2 ccompare_nat)))
-             ((ceq_list (ceq_sum _A1 ceq_nat)),
-               (ccompare_list (ccompare_sum _A2 ccompare_nat)), set_impl_list)
-             (fo_nmlz (_A1, _A2, _A3) ad)
-             (sup_setb
-               (finite_UNIV_list, cenum_list, (ceq_list (ceq_sum _A1 ceq_nat)),
-                 (cproper_interval_list (ccompare_sum _A2 ccompare_nat)),
-                 set_impl_list)
-               (image
-                 ((ceq_list (ceq_sum _A1 ceq_nat)),
-                   (ccompare_list (ccompare_sum _A2 ccompare_nat)))
-                 ((ceq_set
-                    (cenum_list, (ceq_list (ceq_sum _A1 ceq_nat)),
-                      (cproper_interval_list
-                        (ccompare_sum _A2
-                          ccompare_nat)).ccompare_cproper_interval)),
-                   (ccompare_set
-                     (finite_UNIV_list, (ceq_list (ceq_sum _A1 ceq_nat)),
-                       (cproper_interval_list (ccompare_sum _A2 ccompare_nat)),
-                       set_impl_list)),
-                   set_impl_set)
-                 (ext_tuple (_A1, _A2, _A4) ad nsa ns) x)));;
-
-let rec remdups_adj _A
-  = function [] -> []
-    | [x] -> [x]
-    | x :: y :: xs ->
-        (if eq _A x y then remdups_adj _A (x :: xs)
-          else x :: remdups_adj _A (y :: xs));;
-
-let rec filter (_A1, _A2) p a = inf_seta (_A1, _A2) a (Collect_set p);;
-
-let rec eval_ajoin (_A1, _A2, _A3, _A4, _A5)
-  ns_phi (aD_phi, (uu, x_phi)) ns_psi (aD_psi, (uv, x_psi)) =
-    (let ad = sup_seta (_A2, _A3.ccompare_cproper_interval) aD_phi aD_psi in
-     let ns_phia = filtera (fun n -> not (membera equal_nat ns_phi n)) ns_psi in
-     let ns =
-       remdups_adj equal_nat
-         (sort_key linorder_nat (fun x -> x) (ns_phi @ ns_psi))
-       in
-     let aD_Delta_phi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_phi
-       in
-     let x_phia =
-       ext_tuple_set (_A2, _A3.ccompare_cproper_interval, _A4, _A5) ad ns_phi
-         ns_phia (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_phi x_phi)
-       in
-      (ad, (card (card_UNIV_nat, ceq_nat, ccompare_nat)
-              (sup_seta (ceq_nat, ccompare_nat)
-                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_phi)
-                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_psi)),
-             filter
-               ((ceq_list (ceq_sum _A2 ceq_nat)),
-                 (ccompare_list
-                   (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)))
-               (fun xs ->
-                 not (member
-                       ((ceq_list (ceq_sum _A2 ceq_nat)),
-                         (ccompare_list
-                           (ccompare_sum _A3.ccompare_cproper_interval
-                             ccompare_nat)))
-                       (fo_nmlz (_A2, _A3.ccompare_cproper_interval, _A4) aD_psi
-                         (proj_tuple ns_psi (zip ns xs)))
-                       x_psi))
-               x_phia)));;
+                 (fun xs x ->
+                   (match
+                     lookupa
+                       ((ccompare_list
+                          (ccompare_sum _A3.ccompare_cproper_interval
+                            ccompare_nat)),
+                         (equal_list (equal_sum _A4 equal_nat)))
+                       idx_psi xs
+                     with None ->
+                       ext_tuple_set
+                         (_A2, _A3.ccompare_cproper_interval, _A4, _A5) ad
+                         ns_phi ns_phia x
+                     | Some y ->
+                       idx_join (_A2, _A3.ccompare_cproper_interval, _A4, _A5)
+                         ad ns ns_phi x ns_psi
+                         (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_psi
+                           (minus_set
+                             ((ceq_list (ceq_sum _A2 ceq_nat)),
+                               (ccompare_list
+                                 (ccompare_sum _A3.ccompare_cproper_interval
+                                   ccompare_nat)))
+                             (ext_tuple_set
+                               (_A2, _A3.ccompare_cproper_interval, _A4, _A5)
+                               aD_psi ns ns_phia
+                               (insert
+                                 ((ceq_list (ceq_sum _A2 ceq_nat)),
+                                   (ccompare_list
+                                     (ccompare_sum _A3.ccompare_cproper_interval
+                                       ccompare_nat)))
+                                 xs (set_empty
+                                      ((ceq_list (ceq_sum _A2 ceq_nat)),
+(ccompare_list (ccompare_sum _A3.ccompare_cproper_interval ccompare_nat)))
+                                      (of_phantom set_impl_lista))))
+                             y))))
+                 idx_phi))));;
 
 let rec set_fo_term (_A1, _A2, _A3)
   = function Const x1 -> insert (_A1, _A2) x1 (bot_set (_A1, _A2, _A3))
@@ -2882,6 +2894,13 @@ let rec fv_fo_term_list = function Var n -> [n]
 let rec fv_fo_terms_list_rec
   = function [] -> []
     | t :: ts -> fv_fo_term_list t @ fv_fo_terms_list_rec ts;;
+
+let rec remdups_adj _A
+  = function [] -> []
+    | [x] -> [x]
+    | x :: y :: xs ->
+        (if eq _A x y then remdups_adj _A (x :: xs)
+          else x :: remdups_adj _A (y :: xs));;
 
 let rec fv_fo_terms_list
   ts = remdups_adj equal_nat
@@ -2950,8 +2969,8 @@ let rec eval_pred (_A1, _A2, _A3, _A4, _A5, _A6) (_B1, _B2, _B3)
 let rec eval_disj (_A1, _A2, _A3, _A4, _A5)
   ns_phi (aD_phi, (uu, x_phi)) ns_psi (aD_psi, (uv, x_psi)) =
     (let ad = sup_seta (_A2, _A3.ccompare_cproper_interval) aD_phi aD_psi in
-     let ns_phia = filtera (fun n -> not (membera equal_nat ns_phi n)) ns_psi in
-     let ns_psia = filtera (fun n -> not (membera equal_nat ns_psi n)) ns_phi in
+     let ns_phia = filter (fun n -> not (membera equal_nat ns_phi n)) ns_psi in
+     let ns_psia = filter (fun n -> not (membera equal_nat ns_psi n)) ns_phi in
      let aD_Delta_phi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_phi
        in
      let aD_Delta_psi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_psi
@@ -2970,6 +2989,22 @@ let rec eval_disj (_A1, _A2, _A3, _A4, _A5)
                (ext_tuple_set (_A2, _A3.ccompare_cproper_interval, _A4, _A5) ad
                  ns_psi ns_psia
                  (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_psi x_psi)))));;
+
+let rec eval_conj (_A1, _A2, _A3, _A4, _A5)
+  ns_phi (aD_phi, (uu, x_phi)) ns_psi (aD_psi, (uv, x_psi)) =
+    (let ad = sup_seta (_A2, _A3.ccompare_cproper_interval) aD_phi aD_psi in
+     let aD_Delta_phi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_phi
+       in
+     let aD_Delta_psi = minus_set (_A2, _A3.ccompare_cproper_interval) ad aD_psi
+       in
+     let ns = filter (membera equal_nat ns_psi) ns_phi in
+      (ad, (card (card_UNIV_nat, ceq_nat, ccompare_nat)
+              (sup_seta (ceq_nat, ccompare_nat)
+                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_phi)
+                (set (ceq_nat, ccompare_nat, set_impl_nat) ns_psi)),
+             idx_join (_A2, _A3.ccompare_cproper_interval, _A4, _A5) ad ns
+               ns_phi (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_phi x_phi)
+               ns_psi (ad_agr_close_set (_A1, _A2, _A3) aD_Delta_psi x_psi))));;
 
 let rec eval_bool (_A1, _A2, _A3) (_B1, _B2)
   b = (if b then (bot_set (_A1, _A2, _A3),
@@ -3007,9 +3042,9 @@ let rec fv_fo_fmla_list_rec
     | Conj (phi, psi) -> fv_fo_fmla_list_rec phi @ fv_fo_fmla_list_rec psi
     | Disj (phi, psi) -> fv_fo_fmla_list_rec phi @ fv_fo_fmla_list_rec psi
     | Exists (n, phi) ->
-        filtera (fun m -> not (equal_nata n m)) (fv_fo_fmla_list_rec phi)
+        filter (fun m -> not (equal_nata n m)) (fv_fo_fmla_list_rec phi)
     | Forall (n, phi) ->
-        filtera (fun m -> not (equal_nata n m)) (fv_fo_fmla_list_rec phi);;
+        filter (fun m -> not (equal_nata n m)) (fv_fo_fmla_list_rec phi);;
 
 let rec fv_fo_fmla_list
   phi = remdups_adj equal_nat
@@ -3104,29 +3139,29 @@ let rec eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7)
          let x_phi = eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) phi i in
           (match psi
             with Pred (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Bool _ ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Eqa (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Neg psia ->
               (let a = eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psia i in
                 eval_ajoin (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi
                   (fv_fo_fmla_list psia) a)
             | Conj (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Disj (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Exists (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)
             | Forall (_, _) ->
-              eval_conj_idx (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
+              eval_conj (_A1, _A3, _A4, _A5, _A7) ns_phi x_phi ns_psi
                 (eval_fmla (_A1, _A2, _A3, _A4, _A5, _A6, _A7) psi i)))
     | Disj (phi, psi), i ->
         eval_disj (_A1, _A3, _A4, _A5, _A7) (fv_fo_fmla_list phi)
@@ -3231,19 +3266,12 @@ let rec ball (_A1, _A2)
           | Some _ -> dlist_all _A1 p dxs)
     | Set_Monad xs, p -> list_all p xs;;
 
-let rec map_of _A
-  x0 k = match x0, k with
-    (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k)
-    | [], k -> None;;
-
 let rec update _A
   k v x2 = match k, v, x2 with k, v, [] -> [(k, v)]
     | k, v, p :: ps ->
         (if eq _A (fst p) k then (k, v) :: ps else p :: update _A k v ps);;
 
 let empty : ('a, 'b) alist = Alist [];;
-
-let rec lookup _A xa = map_of _A (impl_of xa);;
 
 let rec updatea _A xc xd xe = Alist (update _A xc xd (impl_of xe));;
 
@@ -3257,9 +3285,6 @@ let rec mapping_empty _A = function Mapping_RBT -> RBT_Mapping (emptyc _A)
                            | Mapping_Choose -> mapping_empty_choose _A;;
 
 let rec emptya (_A1, _A2) = mapping_empty _A1 (of_phantom (mapping_impl _A2));;
-
-let rec lookupa (_A1, _A2) = function RBT_Mapping t -> lookupb _A1 t
-                             | Assoc_List_Mapping al -> lookup _A2 al;;
 
 let rec updateb (_A1, _A2)
   k v x2 = match k, v, x2 with
