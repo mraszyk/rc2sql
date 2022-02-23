@@ -14,10 +14,11 @@ const int NEG = 0;
 const int EX = 1;
 const int BIN = 2;
 const int ROOT = 3;
-const int AND = 4;
-const int OR = 5;
 
-int sql_insert = 0;
+extern int sql_insert;
+
+/* Data Golf assumptions can be randomly turned off if this flag is set */
+extern const int test;
 
 template<typename T>
 set<T> set_union(set<T> l, set<T> r) {
@@ -83,10 +84,10 @@ static void app_rand(vector<vector<int> > &data, int copy, int *next) {
   }
 }
 
-static vector<vector<int> > gen_rand(int n, int nfv, set<int> eq, int *next) {
+static vector<vector<int> > gen_rand(int n, int nv, set<int> eq, int *next) {
   vector<vector<int> > data(n);
   int copy = -1;
-  for (int i = 0; i < nfv; i++) {
+  for (int i = 0; i < nv; i++) {
     app_rand(data, (in_set(eq, i) ? copy : -1), next);
     if (in_set(eq, i)) copy = i;
   }
@@ -104,33 +105,30 @@ struct fo {
     virtual bool srnf(int par) = 0;
     virtual bool ranf(set<int> gv) = 0;
     virtual bool no_closed() const = 0;
-    bool check_dupl() const {
+    virtual int nav() const = 0;
+    virtual int arity() const = 0;
+    virtual multiset<int> col_eqs() const = 0;
+    bool check_eqs() const {
       auto eqs = col_eqs();
       for (auto it : eqs) {
         if (eqs.count(it) > 1) return 0;
       }
       return 1;
     }
-    virtual bool no_dupl() const = 0;
-    virtual bool check_gfv(set<int> gfv) const = 0;
-    virtual int arity() const = 0;
-    virtual multiset<pair<int, pair<bool, int> > > col_eqs() const = 0;
-    virtual set<int> evar(int l) const = 0;
-    virtual int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen,int mode) const = 0;
-    virtual int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const = 0;
-    int dg(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) {
-      if (mode == 0 || (mode == 2 && gen() % 2 == 0)) {
-        return dgeq(nfv, pos, neg, db, next, gen, mode);
+    virtual pair<set<int>, set<int> > dgeqs(int mode) const = 0;
+    virtual void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const = 0;
+    virtual void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const = 0;
+    void dg(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) {
+      if (mode == 0) {
+        return dgeq(nv, pos, neg, db, next, mode);
       } else {
-        return dgneq(nfv, pos, neg, db, next, gen, mode);
+        return dgneq(nv, pos, neg, db, next, mode);
       }
     }
     virtual void print(std::ostringstream &fmla) const = 0;
 };
 
-bool sr(const fo *fo) {
-  return is_subset(fo->fv, fo->gen) && fo->gen_ex();
-}
+bool sr(const fo *fo);
 
 struct fo_pred : public fo {
     int id;
@@ -160,26 +158,22 @@ struct fo_pred : public fo {
     bool no_closed() const {
       return !fv.empty();
     }
-    bool no_dupl() const {
-      return true;
-    }
-    bool no_leq() const {
-      return true;
-    }
-    bool check_gfv(set<int> gfv) const {
-      return set_inter(fv, gfv).size() != 0;
+    int nav() const {
+      int m = -1;
+      for (auto it : fv) m = max(m, it);
+      return m + 1;
     }
     int arity() const {
       return fv.size();
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
-      return multiset<pair<int, pair<bool, int> > >();
+    multiset<int> col_eqs() const {
+      return multiset<int>();
     }
-    set<int> evar(int l) const {
-      return set<int>();
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      return make_pair(set<int>(), set<int>());
     }
-    vector<int> unify(int nfv, vector<int> it, vector<pair<bool, int> > ts) const {
-      assert(it.size() == nfv);
+    vector<int> subst(int nv, vector<int> it, vector<pair<bool, int> > ts) const {
+      assert(it.size() == nv);
       vector<int> cur(ts.size());
       for (int i = 0; i < ts.size(); i++) {
         if (ts[i].first) {
@@ -190,24 +184,23 @@ struct fo_pred : public fo {
       }
       return cur;
     }
-    int dgaux(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next) const {
+    void dgaux(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next) const {
       set<vector<int> > table;
       for (auto it : pos) {
-        vector<int> cur = unify(nfv, it, ts);
+        vector<int> cur = subst(nv, it, ts);
         table.insert(cur);
         db.push_back(make_pair(id, cur));
       }
       for (auto it : neg) {
-        vector<int> cur = unify(nfv, it, ts);
-        assert (table.find(cur) == table.end());
+        vector<int> cur = subst(nv, it, ts);
+        if (!test) assert(table.find(cur) == table.end());
       }
-      return 1;
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return dgaux(nfv, pos, neg, db, next);
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      dgaux(nv, pos, neg, db, next);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return dgaux(nfv, pos, neg, db, next);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      dgaux(nv, pos, neg, db, next);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "P" << id << "A" << ts.size() << "(";
@@ -248,41 +241,39 @@ struct fo_eq : public fo {
     bool no_closed() const {
       return true;
     }
-    bool no_dupl() const {
-      return true;
-    }
-    bool check_gfv(set<int> gfv) const {
-      return true;
+    int nav() const {
+      int m = x;
+      if (t.first) m = max(m, t.second);
+      return m + 1;
     }
     int arity() const {
       return fv.size();
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
-      multiset<pair<int, pair<bool, int> > > res;
-      res.insert(make_pair(x, t));
+    multiset<int> col_eqs() const {
+      multiset<int> res;
+      res.insert(x);
+      if (t.first) res.insert(t.second);
       return res;
     }
-    set<int> evar(int l) const {
-      if (l & 1) return fv;
-      else return set<int>();
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      return make_pair(fv, set<int>());
     }
-    int dgaux(int nfv, vector<vector<int> > &pos, vector<vector<int> > &neg) const {
+    void dgaux(int nv, vector<vector<int> > &pos, vector<vector<int> > &neg) const {
       assert(t.first);
       for (auto it : pos) {
-        assert(it.size() == nfv);
-        if (it[x] != it[t.second]) return 0;
+        assert(it.size() == nv);
+        if (!test) assert(it[x] == it[t.second]);
       }
       for (auto it : neg) {
-        assert(it.size() == nfv);
-        if (it[x] == it[t.second]) return 0;
+        assert(it.size() == nv);
+        if (!test) assert(it[x] != it[t.second]);
       }
-      return 1;
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return dgaux(nfv, pos, neg);
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      dgaux(nv, pos, neg);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return dgaux(nfv, pos, neg);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      dgaux(nv, pos, neg);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "x" << x << " = " << (t.first ? "x" : "") << t.second;
@@ -317,26 +308,24 @@ struct fo_neg : public fo {
     bool no_closed() const {
       return sub->no_closed();
     }
-    bool no_dupl() const {
-      return sub->no_dupl();
-    }
-    bool check_gfv(set<int> gfv) const {
-      return sub->check_gfv(gfv);
+    int nav() const {
+      return sub->nav();
     }
     int arity() const {
       return sub->arity();
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
+    multiset<int> col_eqs() const {
       return sub->col_eqs();
     }
-    set<int> evar(int l) const {
-      return sub->evar(l + 1);
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      auto x = sub->dgeqs(mode);
+      return make_pair(x.second, x.first);
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return sub->dg(nfv, neg, pos, db, next, gen, mode);
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      sub->dg(nv, neg, pos, db, next, mode);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      return sub->dg(nfv, neg, pos, db, next, gen, mode);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      sub->dg(nv, neg, pos, db, next, mode);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "NOT (";
@@ -382,47 +371,60 @@ struct fo_conj : public fo {
     bool no_closed() const {
       return subl->no_closed() && subr->no_closed();
     }
-    bool no_dupl() const {
-      return check_dupl() && subl->no_dupl() && subr->no_dupl();
-    }
-    bool check_gfv(set<int> gfv) const {
-      return subl->check_gfv(gfv) && subr->check_gfv(gfv);
+    int nav() const {
+      return max(subl->nav(), subr->nav());
     }
     int arity() const {
       return max((int)fv.size(), max(subl->arity(), subr->arity()));
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
+    multiset<int> col_eqs() const {
       return mset_union(subl->col_eqs(), subr->col_eqs());
     }
-    set<int> evar(int l) const {
-      return set_union(subl->evar(l), subr->evar(l));
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      auto v1 = subl->dgeqs(mode), v2 = subr->dgeqs(mode);
+      if (mode == 0) return make_pair(set_union(v1.first, v2.first), set_union(v1.second, v2.second));
+      else return make_pair(set_union(v1.first, v2.first), set_union(v1.first, v2.second));
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
+    void init_z12(int n, int nv, int *next, int mode, vector<vector<int> > &z1, vector<vector<int> > &z2) const {
+      auto v1 = subl->dgeqs(mode), v2 = subr->dgeqs(mode);
+      set<int> vz1, vz2;
+      if (mode == 0) {
+        vz1 = set_union(v1.first, v2.second);
+        vz2 = set_union(v1.second, v2.first);
+      } else {
+        vz1 = set_union(v1.second, v2.second);
+        vz2 = set_union(v1.second, v2.first);
+      }
+      z1 = gen_rand(n, nv, vz1, next);
+      z2 = gen_rand(n, nv, vz2, next);
+    }
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
       int n = min(pos.size(), neg.size());
-      vector<vector<int> > z1 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(1), subr->evar(0)), next);
-      vector<vector<int> > z2 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(0), subr->evar(1)), next);
+      vector<vector<int> > z1, z2;
+      init_z12(n, nv, next, mode, z1, z2);
       vector<vector<int> > pos1 = pos, pos2 = pos;
       pos1.insert(pos1.end(), z1.begin(), z1.end());
       pos2.insert(pos2.end(), z2.begin(), z2.end());
       vector<vector<int> > neg1 = neg, neg2 = neg;
       neg1.insert(neg1.end(), z1.begin(), z1.end());
       neg2.insert(neg2.end(), z2.begin(), z2.end());
-      return subl->dg(nfv, pos1, neg2, db, next, gen, mode) && subr->dg(nfv, pos2, neg1, db, next, gen, mode);
+      subl->dg(nv, pos1, neg2, db, next, mode);
+      subr->dg(nv, pos2, neg1, db, next, mode);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      auto subl = this->subl;
-      auto subr = this->subr;
-      if (mode == 2 && gen() % 2 == 0) swap(subl, subr);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
       int n = min(pos.size(), neg.size());
-      vector<vector<int> > z1 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(0), subr->evar(0)), next);
-      vector<vector<int> > z2 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(0), subr->evar(1)), next);
-      vector<vector<int> > pos1 = pos, pos2 = pos;
-      pos1.insert(pos1.end(), neg.begin(), neg.end());
+      vector<vector<int> > z1, z2;
+      init_z12(n, nv, next, mode, z1, z2);
+      vector<vector<int> > posneg = pos;
+      posneg.insert(posneg.end(), neg.begin(), neg.end());
+      vector<vector<int> > z12 = z1;
+      z12.insert(z12.end(), z2.begin(), z2.end());
+      vector<vector<int> > pos2 = pos;
       pos2.insert(pos2.end(), z2.begin(), z2.end());
-      vector<vector<int> > neg1 = neg, neg2 = z2;
+      vector<vector<int> > neg1 = neg;
       neg1.insert(neg1.end(), z1.begin(), z1.end());
-      neg2.insert(neg2.end(), z1.begin(), z1.end());
-      return subl->dg(nfv, pos1, neg2, db, next, gen, mode) && subr->dg(nfv, pos2, neg1, db, next, gen, mode);
+      subl->dg(nv, posneg, z12, db, next, mode);
+      subr->dg(nv, pos2, neg1, db, next, mode);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "(";
@@ -470,47 +472,60 @@ struct fo_disj : public fo {
     bool no_closed() const {
       return subl->no_closed() && subr->no_closed();
     }
-    bool no_dupl() const {
-      return check_dupl() && subl->no_dupl() && subr->no_dupl();
-    }
-    bool check_gfv(set<int> gfv) const {
-      return subl->check_gfv(gfv) && subr->check_gfv(gfv);
+    int nav() const {
+      return max(subl->nav(), subr->nav());
     }
     int arity() const {
       return max((int)fv.size(), max(subl->arity(), subr->arity()));
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
+    multiset<int> col_eqs() const {
       return mset_union(subl->col_eqs(), subr->col_eqs());
     }
-    set<int> evar(int l) const {
-      return set_union(subl->evar(l), subr->evar(l));
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      auto v1 = subl->dgeqs(mode), v2 = subr->dgeqs(mode);
+      if (mode == 0) return make_pair(set_union(v1.first, v2.first), set_union(v1.second, v2.second));
+      else return make_pair(set_union(v1.first, v2.second), set_union(v1.second, v2.second));
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
+    void init_z12(int n, int nv, int *next, int mode, vector<vector<int> > &z1, vector<vector<int> > &z2) const {
+      auto v1 = subl->dgeqs(mode), v2 = subr->dgeqs(mode);
+      set<int> vz1, vz2;
+      if (mode == 0) {
+        vz1 = set_union(v1.first, v2.second);
+        vz2 = set_union(v1.second, v2.first);
+      } else {
+        vz1 = set_union(v1.first, v2.first);
+        vz2 = set_union(v1.second, v2.first);
+      }
+      z1 = gen_rand(n, nv, vz1, next);
+      z2 = gen_rand(n, nv, vz2, next);
+    }
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
       int n = min(pos.size(), neg.size());
-      vector<vector<int> > z1 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(1), subr->evar(0)), next);
-      vector<vector<int> > z2 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(0), subr->evar(1)), next);
+      vector<vector<int> > z1, z2;
+      init_z12(n, nv, next, mode, z1, z2);
       vector<vector<int> > pos1 = pos, pos2 = pos;
       pos1.insert(pos1.end(), z1.begin(), z1.end());
       pos2.insert(pos2.end(), z2.begin(), z2.end());
       vector<vector<int> > neg1 = neg, neg2 = neg;
       neg1.insert(neg1.end(), z1.begin(), z1.end());
       neg2.insert(neg2.end(), z2.begin(), z2.end());
-      return subl->dg(nfv, pos1, neg2, db, next, gen, mode) && subr->dg(nfv, pos2, neg1, db, next, gen, mode);
+      subl->dg(nv, pos1, neg2, db, next, mode);
+      subr->dg(nv, pos2, neg1, db, next, mode);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      auto subl = this->subl;
-      auto subr = this->subr;
-      if (mode == 2 && gen() % 2 == 0) swap(subl, subr);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
       int n = min(pos.size(), neg.size());
-      vector<vector<int> > z1 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(1), subr->evar(1)), next);
-      vector<vector<int> > z2 = gen_rand((mode == 2 && gen() % 2 == 0 ? 0 : n), nfv, set_union(subl->evar(0), subr->evar(1)), next);
-      vector<vector<int> > neg1 = neg, neg2 = neg;
-      neg1.insert(neg1.end(), pos.begin(), pos.end());
-      neg2.insert(neg2.end(), z2.begin(), z2.end());
-      vector<vector<int> > pos1 = pos, pos2 = z2;
+      vector<vector<int> > z1, z2;
+      init_z12(n, nv, next, mode, z1, z2);
+      vector<vector<int> > pos1 = pos;
       pos1.insert(pos1.end(), z1.begin(), z1.end());
-      pos2.insert(pos2.end(), z1.begin(), z1.end());
-      return subl->dg(nfv, pos1, neg2, db, next, gen, mode) && subr->dg(nfv, pos2, neg1, db, next, gen, mode);
+      vector<vector<int> > neg2 = neg;
+      neg2.insert(neg2.end(), z2.begin(), z2.end());
+      vector<vector<int> > posneg = pos;
+      posneg.insert(posneg.end(), neg.begin(), neg.end());
+      vector<vector<int> > z12 = z1;
+      z12.insert(z12.end(), z2.begin(), z2.end());
+      subl->dg(nv, pos1, neg2, db, next, mode);
+      subr->dg(nv, z12, posneg, db, next, mode);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "(";
@@ -550,40 +565,23 @@ struct fo_ex : public fo {
     bool no_closed() const {
       return !fv.empty() && sub->no_closed();
     }
-    bool no_dupl() const {
-      return sub->no_dupl();
-    }
-    bool check_gfv(set<int> gfv) const {
-      return sub->check_gfv(gfv);
+    int nav() const {
+      return sub->nav();
     }
     int arity() const {
       return max((int)fv.size(), sub->arity());
     }
-    multiset<pair<int, pair<bool, int> > > col_eqs() const {
-      multiset<pair<int, pair<bool, int> > > res;
-      for (auto it : sub->col_eqs()) {
-        if (it.first != var && (!it.second.first || it.second.second != var)) res.insert(it);
-      }
-      return res;
+    multiset<int> col_eqs() const {
+      return sub->col_eqs();
     }
-    set<int> evar(int l) const {
-      return set_rem(sub->evar(l), var);
+    pair<set<int>, set<int> > dgeqs(int mode) const {
+      return sub->dgeqs(mode);
     }
-    int dgeq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      int cpos = -1, cneg = -1;
-      if (in_set(sub->evar(1), var)) cpos = *evar(1).begin();
-      if (in_set(sub->evar(0), var)) cneg = *evar(0).begin();
-      app_rand(pos, cpos, next);
-      app_rand(neg, cneg, next);
-      return sub->dg(nfv + 1, pos, neg, db, next, gen, mode);
+    void dgeq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      sub->dg(nv, pos, neg, db, next, mode);
     }
-    int dgneq(int nfv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, std::mt19937 &gen, int mode) const {
-      int cpos = -1, cneg = -1;
-      if (in_set(sub->evar(1), var)) cpos = *evar(1).begin();
-      if (in_set(sub->evar(0), var)) cneg = *evar(0).begin();
-      app_rand(pos, cpos, next);
-      app_rand(neg, cneg, next);
-      return sub->dg(nfv + 1, pos, neg, db, next, gen, mode);
+    void dgneq(int nv, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > &db, int *next, int mode) const {
+      sub->dg(nv, pos, neg, db, next, mode);
     }
     void print(std::ostringstream &fmla) const override {
       fmla << "EXISTS x" << var << ". ";
@@ -591,166 +589,9 @@ struct fo_ex : public fo {
     }
 };
 
-FILE *open_file_type(const char *prefix, const char *ftype, const char *mode) {
-    std::ostringstream oss;
-    oss << prefix << ftype;
-    return fopen(oss.str().c_str(), mode);
-}
-
-void print_db(FILE *db, vector<pair<int, vector<int> > > es, set<pair<int, int> > sig) {
-    const char *sep = "";
-    for (auto it : es) {
-        int id = it.first;
-        int n = it.second.size();
-        if (sig.find(make_pair(id, n)) == sig.end()) continue;
-        fprintf(db, "%sP%dA%d(", sep, id, n);
-        sep = " ";
-        const char *sep2 = "";
-        for (int j = 0; j < n; j++) {
-            fprintf(db, "%s%d", sep2, it.second[j]);
-            sep2 = ", ";
-        }
-        fprintf(db, ")");
-    }
-    fprintf(db, "\n");
-}
-
-void dump(const char *base, fo *fo, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > db, vector<pair<int, vector<int> > > tdb) {
-    FILE *fmla = open_file_type(base, ".fo", "w");
-    std::ostringstream oss;
-    fo->print(oss);
-    fprintf(fmla, "%s\n", oss.str().c_str());
-    fclose(fmla);
-
-    FILE *sigf = open_file_type(base, ".sig", "w");
-    for (set<pair<int, int> >::iterator it = fo->sig.begin(); it != fo->sig.end(); it++) {
-        int id = it->first;
-        int n = it->second;
-        fprintf(sigf, "P%dA%d(", id, n);
-        const char *sep = "";
-        for (int i = 0; i < n; i++) {
-            fprintf(sigf, "%sint", sep);
-            sep = ",";
-        }
-        fprintf(sigf, ")\n");
-    }
-    fclose(sigf);
-
-    FILE *fdb = open_file_type(base, ".db", "w");
-    print_db(fdb, db, fo->sig);
-    fclose(fdb);
-    FILE *log = open_file_type(base, ".log", "w");
-    fprintf(log, "@0 ");
-    print_db(log, db, fo->sig);
-    fclose(log);
-
-    FILE *ftdb = open_file_type(base, ".tdb", "w");
-    print_db(ftdb, tdb, fo->sig);
-    fclose(ftdb);
-
-    FILE *fpos = open_file_type(base, ".pos", "w");
-    fprintf(fpos, "Finite\n");
-    fprintf(fpos, "(");
-    for (int i = 0; i < fo->fv.size(); i++) fprintf(fpos, "%sx%d", (i == 0 ? "" : ","), i);
-    fprintf(fpos, ")\n");
-    for (auto it : pos) {
-      fprintf(fpos, "(");
-      const char *sep = "";
-      for (auto it2 : it) {
-        fprintf(fpos, "%s%d", sep, it2);
-        sep = ",";
-      }
-      fprintf(fpos, ")\n");
-    }
-    fclose(fpos);
-
-    FILE *fneg = open_file_type(base, ".neg", "w");
-    fprintf(fneg, "Finite\n");
-    fprintf(fneg, "(");
-    for (int i = 0; i < fo->fv.size(); i++) fprintf(fneg, "%sx%d", (i == 0 ? "" : ","), i);
-    fprintf(fneg, ")\n");
-    for (auto it : neg) {
-      fprintf(fneg, "(");
-      const char *sep = "";
-      for (auto it2 : it) {
-        fprintf(fneg, "%s%d", sep, it2);
-        sep = ",";
-      }
-      fprintf(fneg, ")\n");
-    }
-    fclose(fneg);
-
-    FILE *psql = open_file_type(base, ".psql", "w");
-    FILE *msql = open_file_type(base, ".msql", "w");
-    FILE *radb = open_file_type(base, ".radb", "w");
-    fprintf(psql, "DROP TABLE IF EXISTS tbl_T;\n");
-    fprintf(psql, "CREATE TABLE tbl_T (t INT);\n");
-    fprintf(psql, "INSERT INTO tbl_T VALUES (1);\n");
-    fprintf(msql, "USE db;\n");
-    fprintf(msql, "DROP TABLE IF EXISTS tbl_T;\n");
-    fprintf(msql, "CREATE TABLE tbl_T (t INT);\n");
-    fprintf(msql, "INSERT INTO tbl_T VALUES (1);\n");
-    fprintf(radb, "\\sqlexec_{DROP TABLE IF EXISTS tbl_T};\n");
-    fprintf(radb, "\\sqlexec_{CREATE TABLE tbl_T (t INT)};\n");
-    fprintf(radb, "\\sqlexec_{INSERT INTO tbl_T VALUES (1)};\n");
-    for (set<pair<int, int> >::iterator it = fo->sig.begin(); it != fo->sig.end(); it++) {
-        int id = it->first;
-        int n = it->second;
-        fprintf(psql, "DROP TABLE IF EXISTS tbl_P%dA%d;\n", id, n);
-        fprintf(psql, "CREATE TABLE tbl_P%dA%d (", id, n);
-        fprintf(msql, "DROP TABLE IF EXISTS tbl_P%dA%d;\n", id, n);
-        fprintf(msql, "CREATE TABLE tbl_P%dA%d (", id, n);
-        fprintf(radb, "\\sqlexec_{DROP TABLE IF EXISTS tbl_P%dA%d};\n", id, n);
-        fprintf(radb, "\\sqlexec_{CREATE TABLE tbl_P%dA%d (", id, n);
-        const char *sep = "";
-        for (int i = 0; i < n; i++) {
-          fprintf(psql, "%sx%d INT", sep, i);
-          fprintf(msql, "%sx%d INT", sep, i);
-          fprintf(radb, "%sx%d INT", sep, i);
-          sep = ", ";
-        }
-        fprintf(psql, ");\n");
-        fprintf(msql, ");\n");
-        fprintf(radb, ")};\n");
-        if (!sql_insert) {
-          fprintf(psql, "COPY tbl_P%dA%d FROM '%s_P%dA%d.csv' DELIMITER ',' CSV;\n", id, n, base, id, n);
-          fprintf(msql, "LOAD DATA LOCAL INFILE '%s_P%dA%d.csv' INTO TABLE tbl_P%dA%d FIELDS TERMINATED BY ',';\n", base, id, n, id, n);
-        }
-        std::ostringstream oss;
-        oss << base << "_P" << id << "A" << n << ".csv";
-        FILE *tbl = fopen(oss.str().c_str(), "w");
-        for (auto it : db) {
-          int _id = it.first;
-          int _n = it.second.size();
-          if (id == _id && n == _n) {
-            if (sql_insert) {
-              fprintf(psql, "INSERT INTO tbl_P%dA%d VALUES (", id, n);
-              fprintf(msql, "INSERT INTO tbl_P%dA%d VALUES (", id, n);
-              fprintf(radb, "\\sqlexec_{INSERT INTO tbl_P%dA%d VALUES (", id, n);
-            }
-            const char *sep2 = "";
-            for (int j = 0; j < n; j++) {
-                fprintf(tbl, "%s%d", sep2, it.second[j]);
-                if (sql_insert) {
-                  fprintf(psql, "%s%d", sep2, it.second[j]);
-                  fprintf(msql, "%s%d", sep2, it.second[j]);
-                  fprintf(radb, "%s%d", sep2, it.second[j]);
-                }
-                sep2 = ",";
-            }
-            fprintf(tbl, "\n");
-            if (sql_insert) {
-              fprintf(psql, ");\n");
-              fprintf(msql, ");\n");
-              fprintf(radb, ")};\n");
-            }
-          }
-        }
-        fclose(tbl);
-    }
-    fclose(psql);
-    fclose(msql);
-    fclose(radb);
-}
+FILE *open_file_type(const char *prefix, const char *ftype, const char *mode);
+void print_db(FILE *db, vector<pair<int, vector<int> > > es, set<pair<int, int> > sig);
+void dump_table(FILE *f, fo *fo, vector<vector<int> > tbl);
+void dump(const char *base, fo *fo, vector<vector<int> > pos, vector<vector<int> > neg, vector<pair<int, vector<int> > > db, vector<pair<int, vector<int> > > tdb);
 
 #endif

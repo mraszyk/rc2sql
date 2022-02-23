@@ -3,15 +3,11 @@ open Verified
 
 let string_of_list string_of_val xs = String.concat ", " (List.map string_of_val xs)
 
-let rec conv_db = function
-  | [] -> []
-  | (r, t) :: rts ->
-    let rec aux = function
-    | [] -> [(r, Monitor.rbt_insert t Monitor.rbt_empty)]
-    | ((r', ts) :: rtss) -> if r = r' then (r, Monitor.rbt_insert t ts) :: rtss else (r', ts) :: aux rtss
-    in aux (conv_db rts)
-
 let nat_of_int n = Monitor.nat_of_integer (Z.of_int n)
+
+let rec conv_db = function
+  | [] -> Monitor.empty_db
+  | (r, t) :: rts -> Monitor.insert_into_db (r, nat_of_int (List.length t)) (List.map (fun x -> Some x) t) (conv_db rts)
 
 let var x = Monitor.Var (nat_of_int x)
 let const c = Monitor.Const (Monitor.EInt (Z.of_int c))
@@ -46,8 +42,9 @@ let eval f db =
   with
     | Not_found ->
       let init_state = Monitor.minit_safe (conv_fo (fv_fmla f) f) in
-      let ([(_, RBT_set ts)], _) = Monitor.mstep (db, Monitor.nat_of_integer (Z.of_int 0)) init_state in
-      let res = List.length (fv_fmla f) * Monitor.rbt_fold (fun _ c -> c + 1) ts 0 in
+      let ([(_, (_, Monitor.RBT_set x))], _) = Monitor.mstep (db, nat_of_int 0) init_state in
+      let sz = Monitor.rbt_fold (fun _ c -> c + 1) x 0 in
+      let res = List.length (fv_fmla f) * sz in
       Hashtbl.add map f res; res
 
 let rec subs = function
@@ -62,38 +59,21 @@ let rec sum = function
   | [] -> 0
   | x :: xs -> x + sum xs
 
-let cost db f =
-  (* let _ = Printf.printf "cost: %s\n" (string_of_fmla string_of_int (fun f -> f) f) in *)
-  sum (List.map (fun f -> let n = eval f db in (* Printf.printf "  %s: %d\n" (string_of_fmla string_of_int (fun f -> f) f) n; *) n) (List.filter ranf (subs f)))
+let cost db f = sum (List.map (fun f -> eval f db) (List.filter ranf (subs f)))
 
-let sdump prefix sfin sinf =
+let dump prefix fin inf nfin ninf nrfin nrinf =
   let _ =
-      (let ch = open_out (prefix ^ "sfin") in
-      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) sfin); close_out ch) in
+      (let ch = open_out (prefix ^ nfin) in
+      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) fin); close_out ch) in
   let _ =
-      (let ch = open_out (prefix ^ "sinf") in
-      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) sinf); close_out ch) in
+      (let ch = open_out (prefix ^ ninf) in
+      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) inf); close_out ch) in
   let _ =
-      (let ch = open_out (prefix ^ "srfin") in
-      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) sfin); close_out ch) in
+      (let ch = open_out (prefix ^ nrfin) in
+      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) fin); close_out ch) in
   let _ =
-      (let ch = open_out (prefix ^ "srinf") in
-      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) sinf); close_out ch) in
-  ()
-
-let adump prefix afin ainf =
-  let _ =
-      (let ch = open_out (prefix ^ "afin") in
-      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) afin); close_out ch) in
-  let _ =
-      (let ch = open_out (prefix ^ "ainf") in
-      Printf.fprintf ch "%s\n" (string_of_fmla string_of_int (fun f -> f) ainf); close_out ch) in
-  let _ =
-      (let ch = open_out (prefix ^ "arfin") in
-      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) afin); close_out ch) in
-  let _ =
-      (let ch = open_out (prefix ^ "arinf") in
-      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) ainf); close_out ch) in
+      (let ch = open_out (prefix ^ nrinf) in
+      Printf.fprintf ch "%s\n" (ra_of_fmla string_of_int (fun f -> f) inf); close_out ch) in
   ()
 
 let parse prefix =
@@ -104,66 +84,36 @@ let parse prefix =
   let tdb =
     (let ch = open_in (prefix ^ ".tdb") in
      let db = Db_parser.db Db_lexer.token (Lexing.from_channel ch) in
-     (close_in ch; Monitor.mk_db (List.map (fun (r, ts) -> (r, Monitor.RBT_set ts)) (conv_db db)))) in
-  (*
-  let db =
-    (let ch = open_in (prefix ^ ".db") in
-     let db = Db_parser.db Db_lexer.token (Lexing.from_channel ch) in
-     (close_in ch; Monitor.mk_db (List.map (fun (r, ts) -> (r, Monitor.RBT_set ts)) (conv_db db)))) in
-  *)
-  (f, tdb(*, db*))
+     (close_in ch; conv_db db)) in
+  (f, tdb)
 
-let rtrans prefix tdb (*db *)f =
-  let (sfin, sinf) = rtrans (cost tdb) f in
+let rtrans prefix db f =
+  let (sfin, sinf) = rtrans (cost db) f in
   let _ = assert (is_srnf sfin) in
   let _ = assert (is_srnf sinf) in
   let _ = assert (ranf sfin) in
   let _ = assert (ranf sinf) in
-  let _ = sdump prefix sfin sinf in
-  let (afin, ainf) = (agg_of_fmla (cost tdb) sfin, agg_of_fmla (cost tdb) sinf) in
+  let _ = dump prefix sfin sinf "sfin" "sinf" "srfin" "srinf" in
+  let (afin, ainf) = (agg_of_fmla (cost db) sfin, agg_of_fmla (cost db) sinf) in
   let _ = assert (is_srnf afin) in
   let _ = assert (is_srnf ainf) in
   let _ = assert (ranf afin) in
   let _ = assert (ranf ainf) in
-  let _ = adump prefix afin ainf in
-  (*
-  let _ = Hashtbl.clear map in
-  let _ = Monitor.lupclear () in
-  let _ = Printf.printf "%d\n" (cost db sfin) in
-  let _ = Printf.printf "%d\n" (cost db afin) in
-  let _ =
-      (let ch = open_out (prefix ^ "rstxt") in
-      Printf.fprintf ch "%s\n" (pp_fmla string_of_int (fun f -> f) sfin); close_out ch) in
-  let _ =
-      (let ch = open_out (prefix ^ "ratxt") in
-      Printf.fprintf ch "%s\n" (pp_fmla string_of_int (fun f -> f) afin); close_out ch) in
-  *)
+  let _ = dump prefix afin ainf "afin" "ainf" "arfin" "arinf" in
   ()
 
-let vgtrans prefix tdb (*db *)f =
+let vgtrans prefix db f =
   if not (evaluable f) then () else
-  let (vsfin, vsinf) = vgtrans (cost tdb) f in
+  let (vsfin, vsinf) = vgtrans (cost db) f in
   let _ = assert (is_srnf vsfin) in
   let _ = assert (is_srnf vsinf) in
   let _ = assert (ranf vsfin) in
   let _ = assert (ranf vsinf) in
-  let _ = sdump prefix vsfin vsinf in
-  let (vafin, vainf) = (agg_of_fmla (cost tdb) vsfin, agg_of_fmla (cost tdb) vsinf) in
+  let _ = dump prefix vsfin vsinf "sfin" "sinf" "srfin" "srinf" in
+  let (vafin, vainf) = (agg_of_fmla (cost db) vsfin, agg_of_fmla (cost db) vsinf) in
   let _ = assert (is_srnf vafin) in
   let _ = assert (is_srnf vainf) in
   let _ = assert (ranf vafin) in
   let _ = assert (ranf vainf) in
-  let _ = adump prefix vafin vainf in
-  (*
-  let _ = Hashtbl.clear map in
-  let _ = Monitor.lupclear () in
-  let _ = Printf.printf "%d\n" (cost db vsfin) in
-  let _ = Printf.printf "%d\n" (cost db vafin) in
-  let _ =
-      (let ch = open_out (prefix ^ "vstxt") in
-      Printf.fprintf ch "%s\n" (pp_fmla string_of_int (fun f -> f) vsfin); close_out ch) in
-  let _ =
-      (let ch = open_out (prefix ^ "vatxt") in
-      Printf.fprintf ch "%s\n" (pp_fmla string_of_int (fun f -> f) vafin); close_out ch) in
-  *)
+  let _ = dump prefix vafin vainf "afin" "ainf" "arfin" "arinf" in
   ()

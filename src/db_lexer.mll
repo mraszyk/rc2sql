@@ -16,7 +16,8 @@ rule token = parse
   | "("                                           { LPA }
   | ")"                                           { RPA }
   | ","                                           { COM }
-  | num as n                                      { CST (Monitor.EInt (Z.of_string n)) }
+  | "-"                                           { MINUS }
+  | num as n                                      { CST (Z.of_string n) }
   | (alpha alphanums) as name                     { PRED name }
   | eof                                           { EOF }
   | _                                             { failwith "Illegal character in database file." }

@@ -7,9 +7,6 @@
 #include <random>
 using namespace std;
 
-/* Data Golf assumptions can be selectively turned off if this flag is set */
-const int test = 0;
-
 mt19937 genf, gend;
 
 map<int, int> pred_id;
@@ -22,21 +19,21 @@ fo *gen_fmla(int n, int neg, int maxn, int nfv, int gfv, int root = 0) {
         case 0:
     {
         if (n != 1) break;
-        int n = 1 + genf() % maxn;
-        if (n > nfv) n = nfv;
-        int id = pred_id[n]++;
+        int m = 1 + genf() % maxn;
+        if (m > nfv) m = nfv;
+        int id = pred_id[m]++;
         vector<int> vars(nfv);
         for (int i = 0; i < nfv; i++) vars[i] = i;
         for (int i = nfv - 1; i > 0; i--) {
           swap(vars[i], vars[genf() % (i + 1)]);
         }
-        vector<pair<bool, int> > ts(n);
-        if (n > 0) {
+        vector<pair<bool, int> > ts(m);
+        if (m > 0) {
           ts[0].first = 1;
           ts[0].second = genf() % gfv;
         }
         int idx = 0;
-        for (int i = 1; i < n; i++) {
+        for (int i = 1; i < m; i++) {
           ts[i].first = 1;
           if (vars[idx] == ts[0].second) idx++;
           ts[i].second = vars[idx++];
@@ -48,7 +45,7 @@ fo *gen_fmla(int n, int neg, int maxn, int nfv, int gfv, int root = 0) {
     {
         if (n != 1 || nfv < 2) break;
         int x = genf() % (nfv - 1);
-        int y = x + 1 + genf() % (nfv - x - 1);
+        int y = x + 1 + genf() % (nfv - 1 - x);
         pair<bool, int> t;
         t.first = 1;
         t.second = y;
@@ -57,7 +54,7 @@ fo *gen_fmla(int n, int neg, int maxn, int nfv, int gfv, int root = 0) {
 
         case 2:
     {
-        if (n < 2 || n == 3 || neg) break;
+        if (n < 2 || neg) break;
         return new fo_neg(gen_fmla(n - 1, 1, maxn, nfv, gfv));
     }
 
@@ -96,16 +93,15 @@ fo *gen_fmla(int n, int neg, int maxn, int nfv, int gfv, int root = 0) {
 int check_dg(fo *fo, int nfv, int fvgen, int maxn, int b[]) {
   return
     /* Data Golf assumptions */
-    (b[0] || fo->check_gfv(fo->fv)) &&
-    ((b[1] && !fvgen) || fo->con_ex()) &&
-    (b[2] || fo->no_closed()) &&
+    ((b[0] && !fvgen) || fo->con_ex()) &&
+    (b[1] || fo->no_closed()) &&
+    (b[2] || fo->check_eqs()) &&
     /* Size requirements */
     (b[3] || fo->fv.size() == nfv) &&
     (b[4] || fo->arity() <= maxn) &&
     /* Normalization */
     (b[5] || fo->srnf(ROOT)) &&
     (b[6] || !sr(fo)) &&
-    (b[7] || fo->no_dupl()) &&
     /* Evaluable? */
     (fvgen == is_subset(fo->fv, fo->gen));
 }
@@ -113,8 +109,8 @@ int check_dg(fo *fo, int nfv, int fvgen, int maxn, int b[]) {
 fo *random(int n, int maxn, int nfv, int fvgen, int mode, int seed) {
   fo *fmla = NULL;
   int c = 0;
-  int b[8];
-  for (int i = 0; i < 8; i++) b[i] = (test ? genf() % 2 : 0);
+  int b[7];
+  for (int i = 0; i < 7; i++) b[i] = (test ? genf() % 2 : 0);
   do {
     if (fmla != NULL) delete fmla;
     pred_id.clear();
@@ -126,16 +122,7 @@ fo *random(int n, int maxn, int nfv, int fvgen, int mode, int seed) {
     } else {
       fmla = gen_fmla(n, 0, maxn, nfv, nfv, 1);
     }
-    int next = 0;
-    vector<pair<int, vector<int> > > db;
-    gend.seed(seed);
-    c = fmla->dg(nfv, gen_rand(1, nfv, fmla->evar(1), &next), gen_rand(1, nfv, fmla->evar(0), &next), db, &next, gend, 0);
-    if (c == 1) {
-      db.clear();
-      gend.seed(seed);
-      c = fmla->dg(nfv, gen_rand(1, nfv, fmla->evar(1), &next), gen_rand(1, nfv, fmla->evar(0), &next), db, &next, gend, 1);
-    }
-  } while (!(c == 1 && check_dg(fmla, nfv, fvgen, maxn, b)));
+  } while (!check_dg(fmla, nfv, fvgen, maxn, b));
   return fmla;
 }
 
@@ -174,13 +161,14 @@ int main(int argc, char **argv) {
 
     fo *fmla = random(n, maxn, nfv, fvgen, mode, seed);
 
+    int nav = fmla->nav();
+    auto v = fmla->dgeqs(mode);
     int next = 0;
 
     vector<pair<int, vector<int> > > db;
-    gend.seed(seed);
-    vector<vector<int> > pos = gen_rand(minl, nfv, fmla->evar(1), &next);
-    vector<vector<int> > neg = gen_rand(minl, nfv, fmla->evar(0), &next);
-    fmla->dg(nfv, pos, neg, db, &next, gend, mode);
+    vector<vector<int> > pos = gen_rand(minl, nav, v.first, &next);
+    vector<vector<int> > neg = gen_rand(minl, nav, v.second, &next);
+    fmla->dg(nav, pos, neg, db, &next, mode);
     gend.seed(seed);
     for (int i = db.size() - 1; i > 0; i--) {
       swap(db[i], db[gend() % (i + 1)]);
@@ -189,10 +177,9 @@ int main(int argc, char **argv) {
     next = 0;
 
     vector<pair<int, vector<int> > > tdb;
-    gend.seed(seed);
-    vector<vector<int> > tpos = gen_rand(mintl, nfv, fmla->evar(1), &next);
-    vector<vector<int> > tneg = gen_rand(mintl, nfv, fmla->evar(0), &next);
-    fmla->dg(nfv, tpos, tneg, tdb, &next, gend, mode);
+    vector<vector<int> > tpos = gen_rand(mintl, nav, v.first, &next);
+    vector<vector<int> > tneg = gen_rand(mintl, nav, v.second, &next);
+    fmla->dg(nav, tpos, tneg, tdb, &next, mode);
     gend.seed(seed);
     for (int i = tdb.size() - 1; i > 0; i--) {
       swap(tdb[i], tdb[gend() % (i + 1)]);

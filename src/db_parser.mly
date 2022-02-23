@@ -1,5 +1,5 @@
-%token LPA RPA COM
-%token <Verified.Monitor.event_data> CST
+%token LPA RPA COM MINUS
+%token <Z.t> CST
 %token <string> PRED
 %token EOF
 
@@ -9,10 +9,17 @@
 %%
 
 db:
-  | PRED LPA fields RPA db { ($1, $3) :: $5 }
-  | EOF                    { [] }
+  | db=onedb EOF              { db }
+
+onedb:
+  | PRED LPA fields RPA onedb { ($1, List.map (fun n -> Verified.Monitor.EInt n) $3) :: $5 }
+  |                           { [] }
+
+number:
+  | n=CST                     { n }
+  | MINUS n=CST               { Z.neg n }
 
 fields:
-  | CST COM fields         { $1 :: $3 }
-  | CST                    { [$1] }
-  |                        { [] }
+  | n=number COM fields       { n :: $3 }
+  | n=number                  { [n] }
+  |                           { [] }

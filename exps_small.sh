@@ -13,11 +13,14 @@ minl="${5}"
 mintl="${6}"
 seeds="${7}"
 
+echo -n "\\multicolumn{1}{r@{\\cspace}|@{\\cspace}}{\\trtime}"
 for i in ${seeds}
 do
   /home/rcsql/tools/gen_test "/home/rcsql/z_${i}" "${sz}" "${maxn}" "${nfv}" "${fvgen}" "${minl}" "${mintl}" 1 "${i}"
-  init > /dev/null
+  init
 done
+echo "\\\\"
+echo "\\hline"
 
 line "\\tool" run01APSQL
 line "\\toolnonopt" run01SPSQL

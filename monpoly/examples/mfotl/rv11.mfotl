@@ -1,1 +1,0 @@
-   publish(r) IMPLIES EVENTUALLY[1d,7d] approve(r)

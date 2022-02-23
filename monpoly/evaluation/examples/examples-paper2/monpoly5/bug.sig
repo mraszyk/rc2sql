@@ -1,1 +1,0 @@
-P0(int, int, int)

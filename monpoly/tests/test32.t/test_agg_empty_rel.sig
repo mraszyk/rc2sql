@@ -1,2 +1,0 @@
-p (string, int)
-q ()

@@ -1,8 +1,8 @@
-FROM ubuntu:20.04
+FROM ubuntu:21.10
 
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y bc bison ca-certificates flex git libgmp3-dev locales make mysql-server mysql-client m4 opam openjdk-8-jdk postgresql postgresql-contrib python3 python3-setuptools texlive vim
+RUN DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y bc bison ca-certificates clang flex git libgmp3-dev libssl-dev locales make mysql-server mysql-client m4 opam openjdk-8-jdk postgresql postgresql-contrib python3 python3-setuptools texlive vim
 
 RUN adduser --disabled-password --gecos "" rcsql
 RUN locale-gen en_US.UTF-8 &&\
@@ -14,7 +14,7 @@ ENV LDDIR ${WDIR}/ldd-r6438
 WORKDIR ${WDIR}
 
 RUN opam init -y --disable-sandboxing
-RUN opam install -y ocamlbuild ocamlfind dune dune-build-info menhir zarith
+RUN opam install -y ocamlbuild ocamlfind dune dune-build-info menhir qcheck zarith
 RUN opam switch create 4.05.0
 RUN opam switch default
 
@@ -24,6 +24,10 @@ RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/categoryFiles/Gift_Ca
 RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Gift_Cards.json.gz
 RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/categoryFiles/Musical_Instruments.json.gz
 RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Musical_Instruments.json.gz
+
+# MonPoly/VeriMon
+RUN git clone https://bitbucket.org/jshs/monpoly.git
+RUN eval `opam config env`; cd monpoly; dune build --release; dune install
 
 # local files
 ADD . ${WDIR}
@@ -43,9 +47,6 @@ RUN cd /home/rcsql/monpoly-reg-1.0/src/mona; make install
 USER rcsql
 RUN opam switch 4.05.0; eval `opam config env`; cd monpoly-reg-1.0; make
 RUN opam switch default
-
-# MonPoly/VeriMon
-RUN eval `opam config env`; cd monpoly; dune build --release; dune install
 
 # DDD
 RUN make -C dddlib

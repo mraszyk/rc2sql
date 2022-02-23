@@ -69,16 +69,16 @@ void dump_db(const char *base, std::map<std::string, std::vector<std::vector<int
     FILE *psql = open_file_type(base, ".psql", "w");
     FILE *msql = open_file_type(base, ".msql", "w");
     FILE *radb = open_file_type(base, ".radb", "w");
-    fprintf(psql, "DROP TABLE IF EXISTS tbl_T;\n");
-    fprintf(psql, "CREATE TABLE tbl_T (t INT);\n");
-    fprintf(psql, "INSERT INTO tbl_T VALUES (1);\n");
+    fprintf(psql, "DROP TABLE IF EXISTS tbl;\n");
+    fprintf(psql, "CREATE TABLE tbl (t INT);\n");
+    fprintf(psql, "INSERT INTO tbl VALUES (1);\n");
     fprintf(msql, "USE db;\n");
-    fprintf(msql, "DROP TABLE IF EXISTS tbl_T;\n");
-    fprintf(msql, "CREATE TABLE tbl_T (t INT);\n");
-    fprintf(msql, "INSERT INTO tbl_T VALUES (1);\n");
-    fprintf(radb, "\\sqlexec_{DROP TABLE IF EXISTS tbl_T};\n");
-    fprintf(radb, "\\sqlexec_{CREATE TABLE tbl_T (t INT)};\n");
-    fprintf(radb, "\\sqlexec_{INSERT INTO tbl_T VALUES (1)};\n");
+    fprintf(msql, "DROP TABLE IF EXISTS tbl;\n");
+    fprintf(msql, "CREATE TABLE tbl (t INT);\n");
+    fprintf(msql, "INSERT INTO tbl VALUES (1);\n");
+    fprintf(radb, "\\sqlexec_{DROP TABLE IF EXISTS tbl};\n");
+    fprintf(radb, "\\sqlexec_{CREATE TABLE tbl (t INT)};\n");
+    fprintf(radb, "\\sqlexec_{INSERT INTO tbl VALUES (1)};\n");
     for (std::map<std::string, std::vector<std::vector<int> > >::iterator sig = db.begin(); sig != db.end(); sig++) {
         const char *name = sig->first.c_str();
         assert(sig->second.size() != 0);

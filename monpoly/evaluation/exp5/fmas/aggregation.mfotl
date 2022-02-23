@@ -1,1 +1,0 @@
-(m <- MAX s; (s <- CNT id; x TRUE SINCE A(id,x))) AND (m <- CNT id; x TRUE SINCE A(id,x))

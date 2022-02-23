@@ -1,5 +1,5 @@
 This directory contains benchmarks supporting our observations
-in Example 22 (SRNF vs ENF) and Section E.3. (LEFT JOIN vs EXCEPT).
+in Example 2.18 (SRNF vs ENF) and Section 4.2.6 (LEFT JOIN vs EXCEPT).
 
 To run the benchmarks, execute the script `run.sh` as shown below
 in the directory whose name is shown next to the respective query.

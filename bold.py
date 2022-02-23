@@ -2,8 +2,11 @@ import re
 import sys
 
 def safeFloat(s):
+  m=re.search("([0-9.]*) s", s)
+  if m is None:
+    return None
   try:
-    return float(s)
+    return float(m.group(1))
   except ValueError:
     return None
 
@@ -17,7 +20,7 @@ data = []
 out = []
 
 for l in ls:
-  ml = re.search("line", l)
+  ml = re.search("line|multicolumn", l)
   if ml is None:
     assert(l[-2:] == "\\\\")
     data.append(l[:-2].split('&'))
@@ -42,18 +45,16 @@ for l in data:
       o.append(l[j])
   out.append(o)
 
-sep = ('|' if sys.argv[3] == "yes" else '')
+sep = ('|' if sys.argv[3] == "sep" else '')
 
 f = open(sys.argv[1], "w")
 for l in ls:
-  ml = re.search("line", l)
+  ml = re.search("line|multicolumn", l)
   if ml is None:
     cs = out[0]
     out = out[1:]
-    if sys.argv[3] == "dupl":
-      cs = cs[:7] + [""] + [cs[0]] + cs[7:]
-    else:
-      cs[5] = '\\multicolumn{}{}{}{}{}'.format('{1}{r@{\cspace}', sep, '@{\cspace}}{', cs[5], '}')
+    if sys.argv[3] != "none":
+      cs[5] = '\\multicolumn{}{}{}{}{}'.format('{1}{r@{\\cspace}', sep, '@{\\cspace}}{', cs[5], '}')
     print('{}\\\\'.format('&'.join(cs)), file=f)
   else:
     print(l, file=f)

@@ -21,6 +21,7 @@ module FO : sig
   val agg_of_fmla: ('a fmla -> int) -> 'a fmla -> 'a fmla
   val is_srnf: 'a fmla -> bool
   val srnf: 'a fmla -> 'a fmla
+  val ssrnf: 'a fmla -> 'a fmla
   val sr: 'a fmla -> bool
   val evaluable: 'a fmla -> bool
   val rtrans: ('a fmla -> int) -> 'a fmla -> 'a fmla * 'a fmla
@@ -62,7 +63,7 @@ let rec fv_fmla = function
 
 let fv_fmlas fs = Misc.union' (List.map fv_fmla fs)
 
-(* Figure 11 *)
+(* Figure 2.15 *)
 let rec ranf = function
   | False -> true
   | True -> true
@@ -96,7 +97,7 @@ let rec string_of_fmla string_of_val string_of_var =
   | Neg f -> "NOT (" ^ aux f ^ ")"
   | Disj (f, g) -> "(" ^ aux f ^ ") OR (" ^ aux g ^ ")"
   | Conj (f, g) -> "(" ^ aux f ^ ") AND (" ^ aux g ^ ")"
-  | Exists (v, f) -> "EXISTS " ^ string_of_var v ^ ". " ^ aux f
+  | Exists (v, f) -> "EXISTS " ^ string_of_var v ^ ". (" ^ aux f ^ ")"
   | Cnt (c, [], f) -> "(" ^ aux f ^ ") AND (c = 1)"
   | Cnt (c, v :: vs, f) ->
     let gs = (match Misc.diff (fv_fmla f) (v :: vs) with [] -> "" | gs -> "; " ^ string_of_list string_of_var gs) in
@@ -122,9 +123,9 @@ let ra_of_fmla string_of_val string_of_var =
   let rec aux f =
     let fv = List.sort compare (fv_fmla f) in
     match f with
-      | False -> "\\select_{0 = 1} tbl_T"
-      | True -> "tbl_T"
-      | Eq (v, Const c) -> "\\rename_{" ^ string_of_var v ^ "} \\project_{" ^ string_of_val c ^ "} tbl_T"
+      | False -> "\\select_{0 = 1} tbl"
+      | True -> "tbl"
+      | Eq (v, Const c) -> "\\rename_{" ^ string_of_var v ^ "} \\project_{" ^ string_of_val c ^ "} tbl"
       | Pred (r, ts) ->
         let rec lup y n = function
           | (z :: zs) -> if y = z then n else lup y (n + 1) zs in
@@ -137,10 +138,10 @@ let ra_of_fmla string_of_val string_of_var =
         in let sel = match bs 0 ts with
             [] -> "tbl_" ^ r
           | cs -> "\\select_{" ^ String.concat " AND " cs ^ "} " ^ "tbl_" ^ r
-        in (match fv with [] -> "\\project_{t} (tbl_T \\cross " ^ sel ^ ")"
+        in (match fv with [] -> "\\project_{t} (tbl \\cross " ^ sel ^ ")"
           | _ -> "\\rename_{" ^ string_of_list string_of_var fv ^ "} \\project_{" ^
           string_of_list (fun v -> "x" ^ string_of_int (lup (Var v) 0 ts)) fv ^ "} " ^ sel)
-      | Neg f -> "tbl_T \\diff (" ^ aux f ^ ")"
+      | Neg f -> "tbl \\diff (" ^ aux f ^ ")"
       | Disj (f, g) -> "(" ^ aux f ^ ") \\union (" ^ aux g ^ ")"
       | Conj (f, g) ->
         let zs = match fv with [] -> "t" | _ -> string_of_list string_of_var fv in
@@ -164,20 +165,19 @@ let ra_of_fmla string_of_val string_of_var =
           | Neg g' -> "(" ^ aux f ^ ") \\diff (" ^ aux g' ^ ")")
       | Exists (v, f) ->
         let (_, f') = flatten_ex (Exists (v, f)) in
-        (match fv with [] -> "\\project_{t} (tbl_T \\cross (" ^ aux f' ^ "))"
+        (match fv with [] -> "\\project_{t} (tbl \\cross (" ^ aux f' ^ "))"
         | _ -> "\\project_{" ^ string_of_list string_of_var fv ^ "} (" ^ aux f' ^ ")")
       | Cnt (c, vs, f) ->
         let sc = string_of_var c in
         let xs = Misc.diff fv [c] in
         let sxs = string_of_list string_of_var xs in
-        let svs = string_of_list string_of_var vs in
         (match xs with [] -> "\\rename_{" ^ sc ^ "} \\aggr_{COUNT(1)} (" ^ aux f ^ ")"
         | _ -> "\\project_{" ^ string_of_list string_of_var fv ^ "} \\rename_{" ^
           sxs ^ ", " ^ sc ^ "} \\aggr_{" ^
           sxs ^ ": COUNT(1)} (" ^ aux f ^ ")")
   in aux
 
-(* Figure 10 *)
+(* Figure 2.9 *)
 let rec cp = function
   | False -> False
   | True -> True
@@ -216,7 +216,7 @@ let fresh_var fv =
     else var
   in fresh_var_rec 0
 
-(* Definition 20 *)
+(* Definition 23 *)
 let rec rename i j f =
   let rename_var i j v = if i = v then j else v in
   let rec rename_trm i j = function
@@ -239,7 +239,6 @@ let rec rename i j f =
       else Exists (v, aux i j f)
   in cp (aux i j f)
 
-(* Equivalence class of variable v w.r.t. set of equalities es *)
 let eq_trans v es =
   let eq_derive vs (v, v') = if List.mem v vs || List.mem v' vs then [v; v'] else [] in
   let rec aux vs =
@@ -365,9 +364,9 @@ let rec is_srnf = function
   | Exists (v, f) -> List.mem v (fv_fmla f) && is_srnf f
   | _ -> true
 
-(* Figure 13 *)
+(* Figure 2.14 *)
 let rec srnf = function
-  | Neg (Neg f') -> srnf f'
+  | Neg (Neg f) -> srnf f
   | Neg (Disj (f, g)) -> srnf (Conj (Neg f, Neg g))
   | Neg (Conj (f, g)) -> srnf (Disj (Neg f, Neg g))
   | Neg (Exists (v, f)) ->
@@ -376,13 +375,15 @@ let rec srnf = function
     (match srnf f' with
     | Disj (f'', g'') -> srnf (Conj (Neg (exists vs f''), Neg (exists vs g'')))
     | f'' -> Neg (exists vs f''))
+  | Neg f -> Neg (srnf f)
   | Disj (f, g) -> disj (List.map srnf (flatten_disj (Disj (f, g))))
-  | Conj (f, g) -> conj (List.map srnf (flatten_conj (Conj (f, g))))
+  | Conj (f, g) -> rconj (List.map srnf (flatten_conj (Conj (f, g))))
   | Exists (v, f) ->
     let (vs, f') = flatten_ex (Exists (v, f)) in
     (match srnf f' with
     | Disj (f'', g'') -> srnf (Disj (exists vs f'', exists vs g''))
     | f'' -> exists vs f'')
+  | Cnt (c, vs, f) -> Cnt (c, vs, srnf f)
   | f -> f
 
 let neg f = Neg f
@@ -396,6 +397,7 @@ let rec ssrnf = function
     (match ssrnf f' with
     | Disj (f'', g'') -> ssrnf (Conj (Neg (exists vs f''), Neg (exists vs g'')))
     | f'' -> Neg (exists vs f''))
+  | Neg f -> Neg (ssrnf f)
   | Disj (f, g) -> disj (List.map ssrnf (flatten_disj (Disj (f, g))))
   | Conj (f, g) ->
     let (fps, feqs, fnexs, fns) = splitconj (flatten_conj (Conj (f, g))) in
@@ -422,7 +424,7 @@ let rec powset = function
   | x :: xs -> let xss = powset xs in List.map (fun xs -> x :: xs) xss @ xss
 
 (* Lemma 28 *)
-let agg1 cost vs f =
+let agg1 vs f =
   let (fps, feqs, fnexs, fns) = splitconj (flatten_conj f) in
   let ns = fnexs @ fns in
   match ns with [] -> exists vs f
@@ -438,7 +440,7 @@ let agg1 cost vs f =
     disj [sconj (exps :: nexnps); exists [c; c'] (sconj (Cnt (c, vs, cps) :: Cnt (c', vs, disj nps) :: Neg (Eq (c, Var c')) :: []))]
 
 (* Lemma 29 *)
-let agg2 cost s' vs f' =
+let agg2 s' vs f' =
   let (fps, feqs, fnexs, fns) = splitconj (flatten_conj f') in
   let ns = fnexs @ fns in
   match ns with [] -> sconj (s' @ [Neg (exists vs f')])
@@ -506,7 +508,7 @@ let agg_of_fmla cost f =
                                          Misc.disjoint x1 x2 && List.length x1 <> 0 && List.length x2 <> 0 && ranf (smult fs')) (powset fs) in
       let candmult = List.map (fun fs' -> ms (smult fs')) fss' in
       opt_choice cost (candpull @ candmult)) in
-        Hashtbl.add mmap f f'; f'
+    Hashtbl.add mmap f f'; f'
   in let rec aux = function
     | False -> False
     | True -> True
@@ -518,13 +520,13 @@ let agg_of_fmla cost f =
       let (fps, feqs, fnexs, fns) = splitconj (flatten_conj (Conj (f, g))) in
       let ps' = List.map aux (fps @ feqs @ fns) in
       (match fnexs with [] -> sconj ps'
-      | _ -> sconj (List.concat (List.map (fun f -> match f with Neg ex -> let (vs, f') = flatten_ex ex in List.concat (List.map (fun f'' -> flatten_conj (ms (agg2 cost ps' vs f''))) (flatten_disj (aux f')))) fnexs)))
+      | _ -> sconj (List.concat (List.map (fun f -> match f with Neg ex -> let (vs, f') = flatten_ex ex in List.concat (List.map (fun f'' -> flatten_conj (ms (agg2 ps' vs f''))) (flatten_disj (aux f')))) fnexs)))
     | Exists (v, f) ->
       let (vs, f') = flatten_ex (Exists (v, f)) in
-      disj (List.map (fun f'' -> ms (agg1 cost vs f'')) (flatten_disj (aux f')))
+      disj (List.map (fun f'' -> ms (agg1 vs f'')) (flatten_disj (aux f')))
   in ssrnf (aux (ms f))
 
-(* Definition 21 *)
+(* Definition 24 *)
 let var_bot x f =
   let rec aux = function
     | False -> False
@@ -546,7 +548,7 @@ let map_nested f xss = List.map (List.map f) xss
 let rec pairwise f xs ys = match xs with [] -> []
                            | z :: zs -> Misc.union (List.map (f z) ys) (pairwise f zs ys)
 
-(* Figure 2 *)
+(* Figure 2.10 *)
 let rec gen v = function
   | False -> [[]]
   | True -> []
@@ -566,7 +568,26 @@ let rec gen v = function
   | Exists (v', f) -> if v = v' then []
                       else map_nested (proj v') (gen v f)
 
-(* Figure 3 *)
+let rec gen_var v = function
+  | False -> true
+  | True -> false
+  | Eq (v', Const c) -> v = v'
+  | Eq (v', Var v'') -> false
+  | Pred (r, ts) -> List.mem v (fv_terms ts)
+  | Neg (Neg f) -> gen_var v f
+  | Neg (Conj (f, g)) -> gen_var v (Disj (Neg f, Neg g))
+  | Neg (Disj (f, g)) -> gen_var v (Conj (Neg f, Neg g))
+  | Neg f -> false
+  | Disj (f, g) -> gen_var v f && gen_var v g
+  | Conj (f, (Eq (v', Var v''))) ->
+    if v = v' then gen_var v f || gen_var v'' f
+    else if v = v'' then gen_var v f || gen_var v' f
+    else gen_var v f
+  | Conj (f, g) -> gen_var v f || gen_var v g
+  | Exists (v', f) -> if v = v' then false
+                      else gen_var v f
+
+(* Figure 4.1 *)
 let rec cov v = function
   | False -> [[]]
   | True -> [[]]
@@ -592,7 +613,7 @@ let rec cov v = function
                                        (map_nested (rename v' v) (gen v' f))
                                      else [List.map (proj v') cs]) (cov v f))
 
-(* Figure 8 *)
+(* Figure 2.11 *)
 let rec vgen v = function
   | False -> [[]]
   | True -> []
@@ -609,7 +630,7 @@ let rec vgen v = function
   | Exists (v', f) -> if v = v' then []
                       else map_nested (proj v') (vgen v f)
 
-(* Figure 8 *)
+(* Figure 2.11 *)
 let rec con v = function
   | False -> [[]]
   | True -> [[]]
@@ -631,22 +652,23 @@ let eqs x cs = List.concat (List.map (fun c -> match c with Eq (_, Var v) -> if 
 let qpreds cs = List.filter (fun c -> match c with Eq (_, Var _) -> false | _ -> true) cs
 
 let opt_cov cost =
-  let rec sum = function
-    | [] -> 0
-    | x :: xs -> x + sum xs
-  in let rec aux = function
+  let rec aux = function
     | [] -> failwith "[opt_cov] empty set"
     | [(x, cs)] -> (x, cs)
     | ((x, cs) :: (x', cs') :: xcss) ->
+      if cs = [] then (x, cs) else if cs' = [] then (x', cs') else
+      let fold_cs = List.fold_left (fun cst c -> cost c + cst) 0 in
+      let cst = fold_cs cs in
+      let cst' = fold_cs cs' in
       let n = List.length (eqs x cs) in
       let n' = List.length (eqs x' cs') in
       if n < n' then aux ((x, cs) :: xcss)
       else if n' < n then aux ((x', cs') :: xcss)
-      else if sum (List.map cost cs) < sum (List.map cost cs') then aux ((x, cs) :: xcss)
+      else if cst < cst' then aux ((x, cs) :: xcss)
       else aux ((x', cs') :: xcss)
   in aux
 
-(* Figure 4 *)
+(* Figure 4.2 *)
 let rb restr cov cost =
   let rec aux = function
     | Neg f -> Neg (aux f)
@@ -657,27 +679,26 @@ let rb restr cov cost =
         | [] -> List.rev acc
         | (h :: hs) ->
           if not (List.mem v (fv_fmla h)) then r (h :: acc) hs else
-          (match gen v h with (gs :: gss) -> r (h :: acc) hs
-           | [] ->
+          if gen_var v h then r (h :: acc) hs else
              let vcss = List.map (fun cs -> (v, cs)) (cov v h) in
              let (_, cs) = opt_cov cost vcss in
              r acc (Misc.remdups (conj (h :: disj (List.map (restr v) (qpreds cs)) :: []) ::
                                   var_bot v h ::
-                                  List.map (fun x -> rename v x h) (eqs v cs) @ hs)))
+                                  List.map (fun x -> rename v x h) (eqs v cs) @ hs))
       in disj (List.map (exists [v]) (r [] (flatten_disj (aux f))))
     | f -> f
   in aux
 
-(* Figure 5 *)
+(* Figure 4.3 *)
 let split restr cov cost f =
   let w f es = List.filter (fun v -> Misc.disjoint (eq_trans v es) (fv_fmla f)) (Misc.union' (List.map (fun (x, y) -> [x; y]) es)) in
   let rec aux (qfin, qinf) = function
     | [] -> (List.rev qfin, List.rev qinf)
     | ((h, es) :: hes) ->
-      let gss = List.map (fun v -> (v, gen v h)) (fv_fmla h) in
-      (match List.filter (fun (v, gs) -> Misc.empty gs) gss with [] -> aux ((h, es) :: qfin, qinf) hes
-       | ungs ->
-         let xcss = List.concat (List.map (fun (v, _) -> List.map (fun cs -> (v, cs)) (cov v h)) ungs) in
+      let ngh = List.filter (fun v -> not (gen_var v h)) (fv_fmla h) in
+      if ngh = [] then aux ((h, es) :: qfin, qinf) hes
+      else (
+         let xcss = List.concat (List.map (fun v -> List.map (fun cs -> (v, cs)) (cov v h)) ngh) in
          let (x, cs) = opt_cov cost xcss in
          aux (qfin, var_bot x h :: qinf)
              ((conj (h :: disj (List.map (restr x) (qpreds cs)) :: []), es) ::
@@ -703,8 +724,8 @@ let sr f =
     | Neg f -> aux f
     | Conj (f, g) -> aux f && aux g
     | Disj (f, g) -> aux f && aux g
-    | Exists (v, f) -> (match gen v f with [] -> false | _ -> aux f)
-  in aux f && List.for_all (fun v -> match gen v f with [] -> false | _ -> true) (fv_fmla f)
+    | Exists (v, f) -> gen_var v f && aux f
+  in aux f && List.for_all (fun v -> gen_var v f) (fv_fmla f)
 
 let evaluable f =
   let rec aux = function
@@ -716,9 +737,16 @@ let evaluable f =
     | Conj (f, g) -> aux f && aux g
     | Disj (f, g) -> aux f && aux g
     | Exists (v, f) -> (match con v f with [] -> false | _ -> aux f)
+    | _ -> false
   in aux f && List.for_all (fun v -> match vgen v f with [] -> false | _ -> true) (fv_fmla f)
 
-(* Figure 14 *)
+let minimal p xs =
+  let rec aux xs = function
+  | [] -> false
+  | (y :: ys) -> p (xs @ ys) || aux (y :: xs) ys in
+  p xs && not (aux [] xs)
+
+(* Figure 2.16 *)
 let srra cost q =
   let opt_srra = opt_choice (fun (f, rs) -> cost f) in
   let rec aux q rs =
@@ -726,21 +754,21 @@ let srra cost q =
   match q with
     | Eq (v, Var v') -> aux (rconj (Eq (v, Var v') :: rs)) []
     | Neg f ->
-      let rss' = List.filter (fun rs' -> sr (rconj (Neg f :: rs'))) (powset rs) in
+      let rss' = List.filter (minimal (fun rs' -> sr (rconj (Neg f :: rs')))) (powset rs) in
       opt_srra (List.map (fun rs' -> match rs' with [] -> let (f', _) = aux f [] in (cp (Neg f'), []) | _ -> aux (rconj (Neg f :: rs')) []) rss')
     | Disj _ ->
       let fs = flatten_disj q in
-      let rss' = List.filter (fun rs' -> sr (disj (List.map (fun f -> rconj (f :: rs')) fs))) (powset rs) in
+      let rss' = List.filter (minimal (fun rs' -> sr (disj (List.map (fun f -> rconj (f :: rs')) fs)))) (powset rs) in
       opt_srra (List.map (fun rs' -> (disj (List.map (fun f -> let (f', _) = aux (rconj (f :: rs')) [] in f') fs), rs')) rss')
     | Conj _ ->
-      let fs = flatten_conj q in
+      let fs = flatten_conj q @ rs in
       let fps = List.filter (fun f -> match f with Eq (v, Var v') -> false | Neg _ -> false | _ -> true) fs in
       let feqs = List.filter (fun f -> match f with Eq (v, Var v') -> true | _ -> false) fs in
       let fns = List.filter (fun f -> match f with Neg (Eq (v, Var v')) -> false | Neg _ -> true | _ -> false) fs in
       let fneqs = List.filter (fun f -> match f with Neg (Eq (v, Var v')) -> true | _ -> false) fs in
-      let fps' = List.map (fun f -> (aux f (Misc.union rs (Misc.diff (Misc.union fps feqs) [f])), f)) fps in
-      let fns' = List.map (fun f -> match f with Neg f -> let (f', _) = aux f (Misc.union rs (Misc.union fps feqs)) in Neg f') fns in
-      let fpss' = List.filter (fun fs' -> Misc.subset fps (Misc.union' (List.map (fun ((f', rs'), f) -> Misc.union rs' [f]) fs'))) (powset fps') in
+      let fps' = List.map (fun f -> (aux f (Misc.diff (Misc.union fps feqs) [f]), f)) fps in
+      let fns' = List.map (fun f -> match f with Neg f -> let (f', _) = aux f (Misc.union fps feqs) in Neg f') fns in
+      let fpss' = List.filter (minimal (fun fs' -> Misc.subset fps (Misc.union' (List.map (fun ((f', rs'), f) -> Misc.union rs' [f]) fs')))) (powset fps') in
       opt_srra (List.map (fun fs' -> (sconj (List.map (fun ((f', rs'), f) -> f') fs' @ feqs @ fns' @ fneqs),
                                       Misc.union' (List.map (fun ((f', rs'), f) -> Misc.inter rs' rs) fs'))) fpss')
     | Exists (v, f) ->
@@ -751,7 +779,7 @@ let srra cost q =
           let v' = fresh_var (fv_fmlas (f :: rs)) in
           (v' :: vs, rename v v' f)
         else (v :: vs, f)) vs ([], f) in
-      let rss' = List.filter (fun rs' -> sr (rconj (f :: rs'))) (powset rs) in
+      let rss' = List.filter (minimal (fun rs' -> sr (rconj (f :: rs')))) (powset rs) in
       opt_srra (List.map (fun rs' -> let (f', _) = aux (rconj (f :: rs')) [] in (cp (exists vs f'), rs')) rss')
     | _ -> (cp q, [])
   in let (q', _) = aux (srnf q) []

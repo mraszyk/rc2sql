@@ -1,8 +1,0 @@
-*.o
-_build
-/monpoly*.install
-
-*~
-\#*\#
-
-/thys/*/*.ocaml

@@ -1,13 +1,10 @@
 \documentclass[11pt,a4paper]{article}
+\usepackage[left=2.5cm,right=2.5cm,top=3.75cm,bottom=3.75cm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{amsmath}
 \usepackage{float}
-
-%%% Margins
-\advance\hoffset-1in
-\advance\textwidth2in
-\advance\voffset-1in
+\pagenumbering{gobble}
 
 %%% Parameters
 \newcommand{\eparam}{n}
@@ -38,40 +35,49 @@
 
 %%% Misc
 \newcommand{\cspace}{\;\;}
+\newcommand{\expspace}{8pt}
 \newcommand{\vgtna}{\ensuremath{-}}
-\newcommand{\cntsub}[1]{\mathsf{\#sub}(#1)}
-\newcommand{\strategya}{\text{Infinite results}}
-\newcommand{\strategyb}{\text{Finite results}}
+\newcommand{\cntsub}[1]{\left|\mathsf{sub}(#1)\right|}
+\newcommand{\dgstrat}{\gamma}
+\newcommand{\strategya}{\text{Infinite results ($\dgstrat=0$)}}
+\newcommand{\strategyb}{\text{Finite results ($\dgstrat=1$)}}
 
 \begin{document}
 \begin{figure}[H]
-\small
-\begin{tabular}{@{}l|r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{}}
+\begin{tabular}{@{}l@{\cspace}|@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{}}
 \noalign{Experiment \smallexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, $\eparam=500$:}
-\input{exps_small.tex}
-\noalign{\smallskip Experiment \mediumexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, $\eparam=20000$:}
-\input{exps_medium.tex}
-\noalign{\smallskip Experiment \largeexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, tool = \tool{}:}
-\input{exps_large.tex}
-\noalign{\smallskip Experiment \infexp{}, Non-evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=7$, $\eparam=4000$:}
+\input{./exps_small.tex}
+\noalign{\vspace{\expspace}}
+\noalign{Experiment \mediumexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, $\eparam=20000$:}
+\input{./exps_medium.tex}
+\noalign{\vspace{\expspace}}
+\noalign{Experiment \largeexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, tool = \tool{}:}
+\input{./exps_large.tex}
+\noalign{\vspace{\expspace}}
+\noalign{Experiment \infexp{}, Non-evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=7$, $\eparam=4000$:}
 &\multicolumn{5}{c@{\cspace}|@{\cspace}}{$\strategya$}&\multicolumn{5}{c}{$\strategyb$}\\
-\input{exps_inf.tex}
+\input{./exps_inf.tex}
 \end{tabular}
 
-TO = Timeout of \togolf{}, RE = Runtime Error
-\caption{Experiments \smallexp{}, \mediumexp{}, \largeexp{}, and \infexp{}.}
+\caption{Experiments \smallexp{}, \mediumexp{}, \largeexp{}, and \infexp{}.
+We use the following abbreviations: TO = Timeout of \togolf{}, RE = Runtime Error.}
 \end{figure}
 
 \begin{figure}[H]
-\small
-\begin{tabular}{@{}l|r@{\cspace}r|r@{\cspace}r|r@{\cspace}rc@{\;\;\;}l|r@{\cspace}r|r@{\cspace}r|r@{\cspace}r@{}}
-\multicolumn{1}{r|}{Query}&\multicolumn{2}{c|}{$\qsusp$}&\multicolumn{2}{c|}{$\qsuspusr$}&\multicolumn{2}{c@{\quad}}{$\qsuspa$}&&\multicolumn{1}{r|}{Query}&\multicolumn{2}{c|}{$\qsusp$}&\multicolumn{2}{c|}{$\qsuspusr$}&\multicolumn{2}{c}{$\qsuspa$}\\
-\multicolumn{1}{r|}{Param. $\eparam$}&$10^3$&$10^4$&$10^3$&$10^4$&$10^3$&$10^4$&&\multicolumn{1}{r|}{Dataset}&GC&MI&GC&MI&GC&MI\\
-\cline{1-7}\cline{9-15}
-\input{exps_susp.tex}
+\begin{tabular}{@{}l@{\cspace}|@{\cspace}r@{\cspace}r@{\cspace}|@{\cspace}r@{\cspace}r@{\cspace}|@{\cspace}r@{\cspace}r@{}}
+\multicolumn{1}{r@{\cspace}|@{\cspace}}{Query}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsusp$}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsuspusr$}&\multicolumn{2}{c}{$\qsuspa$}\\
+\multicolumn{1}{r@{\cspace}|@{\cspace}}{Param. $\eparam$}&$10^3$&$10^4$&$10^3$&$10^4$&$10^3$&$10^4$\\
+\hline
+\input{./exps_suspa.tex}
+\noalign{\vspace{\expspace}}
+\multicolumn{1}{r@{\cspace}|@{\cspace}}{Query}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsusp$}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsuspusr$}&\multicolumn{2}{c}{$\qsuspa$}\\
+\multicolumn{1}{r@{\cspace}|@{\cspace}}{Dataset}&GC&MI&GC&MI&GC&MI\\
+\hline
+\input{./exps_suspb.tex}
 \end{tabular}
 
-GC = Gift Cards dataset, MI = Musical Instruments dataset, TO = Timeout of \tosusp{}
-\caption{Experiment with the queries $\qsusp$, $\qsuspusr$, and $\qsuspa$.}
+\caption{Experiment with the queries $\qsusp$, $\qsuspusr$, and $\qsuspa$.
+We use the following abbreviations: GC = Gift Cards dataset, MI = Musical Instruments dataset, TO = Timeout of \tosusp{}.}
+\label{fig:suspexps}
 \end{figure}
 \end{document}

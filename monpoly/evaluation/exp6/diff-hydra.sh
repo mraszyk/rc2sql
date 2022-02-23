@@ -1,1 +1,0 @@
-egrep -ar "^>"  ./reports/ | grep hydra | egrep -v "unresolved$"

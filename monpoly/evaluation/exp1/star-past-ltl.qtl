@@ -1,2 +1,0 @@
-prop star: 
-  Forall a . Forall b . Forall c . Forall d . (P ((P A(a,b)) & B(a,c))) -> ! C(a,d)

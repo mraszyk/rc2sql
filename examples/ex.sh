@@ -1,4 +1,5 @@
 ./tools/gen_test /home/rcsql/examples/ex 8 4 2 1 10 10 0 0 # 1st argument of gen_test must be ABSOLUTE path
+./src/fo2reg.native examples/ex
 
 ./eval_vmon.sh examples/ex > examples/ex.eoa
 ./eval_psql.sh examples/ex > examples/ex.eopa

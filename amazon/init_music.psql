@@ -1,6 +1,6 @@
-DROP TABLE IF EXISTS tbl_T;
-CREATE TABLE tbl_T (t INT);
-INSERT INTO tbl_T VALUES (1);
+DROP TABLE IF EXISTS tbl;
+CREATE TABLE tbl (t INT);
+INSERT INTO tbl VALUES (1);
 DROP TABLE IF EXISTS tbl_P0A1;
 CREATE TABLE tbl_P0A1 (x0 INT);
 COPY tbl_P0A1 FROM '/home/rcsql/amazon/Musical_Instruments_B.csv' CSV;

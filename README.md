@@ -4,28 +4,16 @@ RC2SQL is a tool for translating relational calculus (RC) queries to SQL.
 RC2SQL takes as input a RC query and a training database
 and outputs a pair of RANF queries:
 - one characterizing the query's relative safety
-- and one equivalent to the query if the query is relatively safe.
+- and one equivalent to the original query if it is relatively safe.
 
-The training database is only used by heuristics in query translation.
-The choice of a training database does NOT impact the translation's correctness.
+The training database is only used by heuristics in the query translation
+to approximate the time complexity of query evaluation over the actual database.
+The choice of the training database does NOT impact the translation's correctness.
 
 VGTrans is our implementation of the translation by Van Gelder & Topor.
 VGTrans has the same interface as RC2SQL.
 
-This repository is the supplementary material for the paper
-
-Practical Relational Calculus Query Evaluation
-
-accepted at ICDT'22. In particular, it contains the extended report on RC2SQL.
-
----
-
-# News:
-
-- November 2: added press-the-button scripts for RC query evaluation
-- September 23: the evaluation results have been updated (see `paper.pdf`)
-  after an optimization in the translation of RA expressions to SQL
-  (replacing `COUNT(DISTINCT ...)` by `COUNT(...)` and using `SELECT DISTINCT ...`)
+This repository is the supplementary material for Martin Raszyk's PhD thesis.
 
 ---
 
@@ -33,7 +21,7 @@ accepted at ICDT'22. In particular, it contains the extended report on RC2SQL.
 
 - `paper.pdf` - extended report on RC2SQL
 - `Dockerfile` - Dockerfile for this supplementary material
-- `test_all.sh` - script to run correctness tests of query evaluation
+- `test_all.sh` - script to run correctness tests for query evaluation
 - `run.sh` - script to run experiments
 - `bold.*` - scripts for postprocessing evaluation results (e.g., highlighting fastest execution)
 - `main.tex` - template of a LaTeX document with evaluation results
@@ -51,9 +39,9 @@ and their translation to SQL by comparing PostgreSQL, MySQL, SQLite, and VeriMon
 - `cnt.py` - script converting an SQL query produced by *radb*
 into an SQL query computing its *query cost*
 - `functions.sh` - helper bash functions
-- `amazon/` - contains scripts for experiments in Figure 7
+- `amazon/` - contains scripts for experiments in Figure 4.6
 - `examples/` - example queries from this README
-- `nf/` - benchmark for Example 22 and Section E.3.
+- `nf/` - benchmark for Example 2.18 and Section 4.2.6
 - `src/` - RC2SQL's source code (in OCaml)
 - `tools/` - tools for generating pseudorandom queries, Data Golf structures,
 and for checking the translation's correctness and Data Golf properties
@@ -61,8 +49,8 @@ and for checking the translation's correctness and Data Golf properties
 Further tools:
 
 - `ailamazyan/` - our implementation of the approach by Ailamazyan et al.,
-including the formally verified core (`src/verified.ml`)
-and the underlying theories (in subdirectory `thys/`)
+including the formally verified core (`src/verified.ml`) exported
+from the AFP entry `Eval_FO` using the proof assistant Isabelle/HOL
 - `dddlib/` - the implementation of Difference Decision Diagrams (DDD)
 - `ddd-rc/` - our implementation of a tool using DDDs for evaluating RC queries
 - `ldd-r6438/` - the implementation of Linear Decision Diagrams (LDD)
@@ -77,7 +65,7 @@ and the underlying theories (in subdirectory `thys/`)
 
 We recommend running the experiments using `docker` and the provided `Dockerfile`.
 Please set up at least 8 GiB of main memory for your Docker container.
-Note that the first command below will take some time to finish (roughly 20 minutes).
+Note that the first command below will take some time to finish.
 ```
 sudo docker build --no-cache -t rc2sql .
 sudo docker run -it rc2sql
@@ -85,9 +73,9 @@ sudo docker run -it rc2sql
 Once you run the second command above you will
 obtain a shell with all the tools installed.
 
-We observed that several queries (e.g., the 7th query in the MEDIUM experiment) time out
+We observed that several queries (e.g., the 2nd query in the MEDIUM experiment) time out
 if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
-Hence, we set `enable_nestloop = off` in all our experiments (l. 77 in Dockerfile).
+Hence, we set `enable_nestloop = off` in all our experiments (l. 78 in Dockerfile).
 
 ---
 
@@ -141,6 +129,7 @@ RC Syntax
         | NOT {f}
         | {f} AND {f}
         | {f} OR  {f}
+        | {f} IMPLIES {f}
         | EXISTS {ID} . {f}
         | FORALL {ID} . {f}
 
@@ -225,10 +214,16 @@ To reproduce the experiments from the paper, run
 $ ./run.sh
 ```
 
-The individual experiments are described in Section 5.
+The individual experiments are described in Section 4.2.7.
+We choose the first ten seeds for all experiments except the experiment INFINITE,
+where we choose the first five seeds that yield different queries
+even after renaming variables and permuting terms in atomic predicates,
+whose evaluation results are not too large,
+and that yield finite and infinite results
+for the two Data Golf strategies, respectively.
 After the script `run.sh` finishes,
 the results are contained in the files `exps_*.tex`
-used to plot Figure 6 and 7.
+used to plot Figure 4.5 and 4.6.
 
 A PDF with the evaluation results can be obtained by executing
 ```
@@ -238,16 +233,16 @@ $ pdflatex main.tex
 
 The timeout for the individual experiments can be set
 in the scripts `exps_*.sh`. With the unmodified timeouts of 300s and 600s, respectively,
-the script would take overnight to recreate the tables.
+the script would take roughly 12 hours to recreate the tables.
 
 Note. If you want to run the benchmarks with a tool
 that is omitted in the paper because the tool always times out or crashes,
 please uncomment the corresponding line in the script `exps_*.sh`, e.g.,
-to execute LDDs in the experiment LARGE, uncomment the following line
+to execute LDDs in the experiment MEDIUM, uncomment the following line
 ```
 #line "\\ldd" run04LDD
 ```
-in the script `exps_large.sh`.
+in the script `exps_medium.sh`.
 
 ---
 
@@ -296,7 +291,7 @@ $ python3 cnt.py z_0.vspsqlfin | psql    # cost of VGT-
 
 Folder `nf/` contains empirical results of our comparison of safe-range normal form (SRNF) and existential normal form (ENF).
 
-These results support our observations in Example 22.
+These results support our observations in Example 2.18.
 
 Furthermore, the folder `nf/` contains an empirical comparison of `LEFT JOIN` vs `EXCEPT`.
 
@@ -314,17 +309,21 @@ Here we use `n = 10` as the script `test_ranf.sh` cannot be used with a higher v
 
 The output (in the file `log.txt`)
 ```
+RE: /home/rcsql/z_14_4_2_1_10_2_1_1/am
 RE: /home/rcsql/z_14_4_2_1_10_2_1_2/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_5/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_7/vsm
-DIFF(p-m): /home/rcsql/z_14_4_2_1_10_2_1_9/va
+RE: /home/rcsql/z_14_4_2_1_10_2_1_3/am
+RE: /home/rcsql/z_14_4_2_1_10_2_1_3/sm
+RE: /home/rcsql/z_14_4_2_1_10_2_1_3/vam
+RE: /home/rcsql/z_14_4_2_1_10_2_1_4/am
+RE: /home/rcsql/z_14_4_2_1_10_2_1_4/vam
+RE: /home/rcsql/z_14_4_2_1_10_2_1_6/vam
+RE: /home/rcsql/z_14_4_2_1_10_2_1_8/am
+RE: /home/rcsql/z_14_4_2_1_10_2_1_8/vam
 ```
-reports 5 inconsistencies between MySQL and PostgreSQL.
+reports 10 inconsistencies between MySQL and PostgreSQL.
 The verdict `DIFF` stands for unsound output while `RE` denotes a runtime error.
 For instance, the first line reports a runtime error in MySQL (suffix `m`)
-on the optimized query (prefix `a`) and the last line reports unsound output
-of either PostgreSQL or MySQL (`p-m`) on the optimized query (suffix `a`)
-produced by VGT (prefix `v`).
+on the optimized query (prefix `a`).
 `DIFF(p-m)` denotes an output inconsistency between PostgreSQL and MySQL.
 `DIFF(p-*.l)` denotes an output inconsistency between PostgreSQL and SQLite.
 `DIFF(p-v)` denotes an output inconsistency between PostgreSQL and VeriMon.
@@ -361,49 +360,3 @@ The parameters are summarized here and can be easily adjusted in the file
 - Minimum number of tuples in a table: 4
 - Minimum number of tuples in a training table: 2
 - Data Golf strategy: 0/1
-
----
-
-# Formalization of the approach by Ailamazyan et al. in Isabelle/HOL
-
-The formal development can be browsed as a generated HTML page (open `ailamazyan/html/index.html`).
-An alternative way to study the theory files is to open them in Isabelle/jEdit.
-
-The raw Isabelle sources are included in the directory `ailamazyan/thys`.
-
-The formalization can been processed with the development version of Isabelle, which can be downloaded from
-
-https://isabelle-dev.sketis.net/source/isabelle/
-
-and installed following the standard instructions from
-
-https://isabelle-dev.sketis.net/source/isabelle/browse/default/README_REPOSITORY
-
-The formalization has been tested with changeset 74363:383fd113baae of Isabelle:
-```
-$ isabelle/Admin/init -r 383fd113baae
-```
-
-It also requires the development version of the Archive of Formal Proofs, which can be downloaded from
-
-https://isabelle-dev.sketis.net/source/afp-devel/
-
-and installed following the standard instructions from
-
-https://www.isa-afp.org/using.html
-
-The formalization has been tested with changeset 12040:61b65f5bfdbe of AFP:
-```
-$ hg update -r 61b65f5bfdbe
-```
-
-To build the theories, export the verified OCaml code, and regenerate the HTML page, run
-`isabelle build -o browser_info -c -e -v -D thys`
-in the directory `ailamazyan`.
-This should take roughly 20 minutes.
-Instructions where to find the verified OCaml code and the generated html sources are printed in the console.
-
-To build the pdf document, run
-`isabelle document -d thys -O thys -v Eval_FO`
-in the directory `ailamazyan`.
-Instructions where to find the pdf document are printed in the console.

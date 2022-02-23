@@ -1,8 +1,14 @@
 function run() {
+  if [[ "${skip}" == "1" ]]
+  then
+    echo -n "TO"
+    return 0
+  fi
+
   local cmd="${1}"
 
   local ts1="$(date +%s%N)"
-  timeout ${to} bash -c "${cmd}" &> /dev/null
+  timeout ${to} script /dev/null </dev/null -eqc "${cmd}" &> /dev/null
   local status="${?}"
 
   local ts2="$(date +%s%N)"
@@ -10,9 +16,11 @@ function run() {
 
   local t="$(echo "scale=1; ${delta}/1000000000" | bc -l)"
   if [[ "${status}" == "0" && "$(echo "${t} < ${to}" | bc -l)" == "1" ]]; then
-    printf "%.1f" "${t}"
+    printf "%.2f s" "${t}"
+    ts+=("${t}")
   elif [[ "${status}" == "124" || "$(echo "${t} >= ${to}" | bc -l)" == "1" ]]; then
     echo -n "TO"
+    skip=1
   else
     echo -n "RE"
   fi
@@ -30,7 +38,7 @@ function runNoTO() {
 
   local t="$(echo "scale=1; ${delta}/1000000000" | bc -l)"
   if [[ "${status}" == "0" ]]; then
-    printf "%.1f" "${t}"
+    printf "%.2f s" "${t}"
   else
     echo -n "RE"
   fi
@@ -40,6 +48,7 @@ function init() {
   echo -n "&"
   runNoTO "./src/rtrans.native z_${i}"
   ./src/vgtrans.native "z_${i}"
+  ./src/fo2reg.native "z_${i}"
   symlinks "${prefix}/z_${i}"
   ./radb.sh "z_${i}"
 }
@@ -125,7 +134,6 @@ function run02APSQL() {
     echo -n "\\vgtna"
   fi
 }
-
 function run03() {
   run "./ailamazyan/src/ail.native -fmla z_${i}.fo -db z_${i}.db"
 }
@@ -143,25 +151,9 @@ function line() {
   echo -n "${1}"
   for i in ${seeds}
   do
+    skip=0
     echo -n "&"
     ${2} ${i}
   done
   echo "\\\\"
-}
-
-function header() {
-  echo -n "\\begin{tabular}{@{}l|"
-  sep=""
-  for i in ${seeds}
-  do
-    echo -n "${sep}r"
-    sep="@{\\cspace}"
-  done
-  echo "@{}}"
-}
-
-function footer() {
-  echo "\\end{tabular}"
-
-  rm -f z_*
 }

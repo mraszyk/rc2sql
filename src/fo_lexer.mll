@@ -12,12 +12,16 @@ rule token = parse
   | blank                                         { token lexbuf }
   | ","                                           { COM }
   | "."                                           { DOT }
+  | "-"                                           { MINUS }
   | "("                                           { LPA }
   | ")"                                           { RPA }
   | "="                                           { EQ }
+  | "TRUE"                                        { TRUE }
+  | "FALSE"                                       { FALSE }
   | "NOT"                                         { NEG }
   | "AND"                                         { CONJ }
   | "OR"                                          { DISJ }
+  | "IMPLIES"                                     { IMPLIES }
   | "EXISTS"                                      { EXISTS }
   | "FORALL"                                      { FORALL }
   | (alpha alphanums) as name                     { ID name }

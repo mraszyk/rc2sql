@@ -69,15 +69,16 @@ int main(int argc, char **argv) {
   }
   // [B(b) AND EXISTS r.] EXISTS ai. NOT EXISTS p. P(b, p) AND NOT Ri(r, ai, p)
   fo *fmla = new fo_conj(new fo_pred(0, ts_b), brand ? ex : new fo_ex(2, ex));
-  int nfv = fmla->fv.size();
 
+
+  int nav = fmla->nav();
+  auto v = fmla->dgeqs(mode);
   int next = 0;
 
   vector<pair<int, vector<int> > > db;
-  gend.seed(seed);
-  vector<vector<int> > pos = gen_rand(minl, nfv, fmla->evar(1), &next);
-  vector<vector<int> > neg = gen_rand(minl, nfv, fmla->evar(0), &next);
-  fmla->dg(nfv, pos, neg, db, &next, gend, mode);
+  vector<vector<int> > pos = gen_rand(minl, nav, v.first, &next);
+  vector<vector<int> > neg = gen_rand(minl, nav, v.second, &next);
+  fmla->dg(nav, pos, neg, db, &next, mode);
   gend.seed(seed);
   for (int i = db.size() - 1; i > 0; i--) {
     swap(db[i], db[gend() % (i + 1)]);
@@ -86,10 +87,9 @@ int main(int argc, char **argv) {
   next = 0;
 
   vector<pair<int, vector<int> > > tdb;
-  gend.seed(seed);
-  vector<vector<int> > tpos = gen_rand(mintl, nfv, fmla->evar(1), &next);
-  vector<vector<int> > tneg = gen_rand(mintl, nfv, fmla->evar(0), &next);
-  fmla->dg(nfv, tpos, tneg, tdb, &next, gend, mode);
+  vector<vector<int> > tpos = gen_rand(mintl, nav, v.first, &next);
+  vector<vector<int> > tneg = gen_rand(mintl, nav, v.second, &next);
+  fmla->dg(nav, tpos, tneg, tdb, &next, mode);
   gend.seed(seed);
   for (int i = tdb.size() - 1; i > 0; i--) {
     swap(tdb[i], tdb[gend() % (i + 1)]);

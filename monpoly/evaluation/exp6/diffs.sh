@@ -1,1 +1,0 @@
-ls reports | grep diff 

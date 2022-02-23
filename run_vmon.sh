@@ -1,13 +1,13 @@
 pref="${1}"
-inf=$(./monpoly/monpoly -sig "${pref}sig" -log "${pref}log" -formula "${pref}inf" -no_rw -verified)
+inf=$(./monpoly/monpoly -sig "${pref}sig" -log "${pref}log" -formula "${pref}inf" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified)
 if [ "$?" -ne 0 ]
 then
   exit 1
 fi
 if [ "${inf}" == "" ]
 then
-  fv=$(./monpoly/monpoly -sig "${pref}sig" -formula "${pref}fin" -no_rw -verified -check)
-  fin=$(./monpoly/monpoly -sig "${pref}sig" -log "${pref}log" -formula "${pref}fin" -no_rw -verified)
+  fv=$(./monpoly/monpoly -sig "${pref}sig" -formula "${pref}fin" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified -check)
+  fin=$(./monpoly/monpoly -sig "${pref}sig" -log "${pref}log" -formula "${pref}fin" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified)
   if [ "$?" -ne 0 ]
   then
     exit 1
