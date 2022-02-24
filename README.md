@@ -26,7 +26,7 @@ This repository is the supplementary material for Martin Raszyk's PhD thesis.
 - `bold.*` - scripts for postprocessing evaluation results (e.g., highlighting fastest execution)
 - `main.tex` - template of a LaTeX document with evaluation results
 - `exps_*.sh` - scripts to run the individual experiments
-- `eval_*.sh` - scripts evaluating an RC query using RC2SQL and a given database engine
+- `eval_*.sh` - scripts evaluating a RC query using RC2SQL and a given database engine
 - `run_*.sh` - scripts invoking a database engine to evaluate a pair of queries after translation
 - `mpreg.sh` - script evaluating a query using MonPoly-REG
 - `radb.sh` - script translating relational algebra (RA) to SQL
@@ -50,7 +50,8 @@ Further tools:
 
 - `ailamazyan/` - our implementation of the approach by Ailamazyan et al.,
 including the formally verified core (`src/verified.ml`) exported
-from the AFP entry `Eval_FO` using the proof assistant Isabelle/HOL
+from the AFP entry [`Eval_FO`](https://www.isa-afp.org/entries/Eval_FO.html)
+using the proof assistant [Isabelle/HOL](https://isabelle.in.tum.de/)
 - `dddlib/` - the implementation of Difference Decision Diagrams (DDD)
 - `ddd-rc/` - our implementation of a tool using DDDs for evaluating RC queries
 - `ldd-r6438/` - the implementation of Linear Decision Diagrams (LDD)
@@ -81,7 +82,7 @@ Hence, we set `enable_nestloop = off` in all our experiments (l. 78 in Dockerfil
 
 # Usage
 
-To evaluate an RC query using RC2SQL and a database engine `${db}` type:
+To evaluate a RC query using RC2SQL and a database engine `${db}` type:
 
 ```
 
@@ -91,7 +92,7 @@ $ ./eval_${db}.sh ${prefix}
 
 where
 
-prefix = prefix of the path to a text file with an RC query (`${prefix}.fo`),
+prefix = prefix of the path to a text file with a RC query (`${prefix}.fo`),
 a training database (`${prefix}.tdb`), and the actual database (`${prefix}.db`).
 
 To run our translation RC2SQL (without evaluating the query on an actual database) type:
@@ -110,7 +111,7 @@ $ ./src/vgtrans.native ${prefix}
 
 where
 
-prefix = prefix of the path to a text file with an RC query (`${prefix}.fo`)
+prefix = prefix of the path to a text file with a RC query (`${prefix}.fo`)
 and a training database (`${prefix}.tdb`).
 
 RC2SQL outputs a pair of queries (`${prefix}.afin`, `${prefix}.ainf`) using
@@ -299,7 +300,7 @@ Please refer to the `README.md` file in the folder `nf/` for more details.
 
 ---
 
-# Unsound results produced by MySQL 8.0.25
+# Unsound results produced by MySQL
 
 Running `for i in {0..9}; do ./test_ranf.sh 14 4 2 1 10 2 1 ${i}; done`
 tests the translation of the queries used in the SMALL experiment

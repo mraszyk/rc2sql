@@ -34,6 +34,7 @@
 \newcommand{\mpreg}{\ensuremath{\mathsf{MonPoly}^\mathsf{REG}}}
 
 %%% Misc
+\newcommand{\trtime}{Translation time}
 \newcommand{\cspace}{\;\;}
 \newcommand{\expspace}{8pt}
 \newcommand{\vgtna}{\ensuremath{-}}
@@ -46,17 +47,17 @@
 \begin{figure}[H]
 \begin{tabular}{@{}l@{\cspace}|@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{\cspace}r@{}}
 \noalign{Experiment \smallexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, $\eparam=500$:}
-\input{./exps_small.tex}
+\csname @@input\endcsname ./exps_small.tex
 \noalign{\vspace{\expspace}}
 \noalign{Experiment \mediumexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, $\eparam=20000$:}
-\input{./exps_medium.tex}
+\csname @@input\endcsname ./exps_medium.tex
 \noalign{\vspace{\expspace}}
 \noalign{Experiment \largeexp{}, Evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=14$, tool = \tool{}:}
-\input{./exps_large.tex}
+\csname @@input\endcsname ./exps_large.tex
 \noalign{\vspace{\expspace}}
 \noalign{Experiment \infexp{}, Non-evaluable pseudorandom queries $\qry$, $\cntsub{\qry}=7$, $\eparam=4000$:}
 &\multicolumn{5}{c@{\cspace}|@{\cspace}}{$\strategya$}&\multicolumn{5}{c}{$\strategyb$}\\
-\input{./exps_inf.tex}
+\csname @@input\endcsname ./exps_inf.tex
 \end{tabular}
 
 \caption{Experiments \smallexp{}, \mediumexp{}, \largeexp{}, and \infexp{}.
@@ -68,12 +69,12 @@ We use the following abbreviations: TO = Timeout of \togolf{}, RE = Runtime Erro
 \multicolumn{1}{r@{\cspace}|@{\cspace}}{Query}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsusp$}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsuspusr$}&\multicolumn{2}{c}{$\qsuspa$}\\
 \multicolumn{1}{r@{\cspace}|@{\cspace}}{Param. $\eparam$}&$10^3$&$10^4$&$10^3$&$10^4$&$10^3$&$10^4$\\
 \hline
-\input{./exps_suspa.tex}
+\csname @@input\endcsname ./exps_suspa.tex
 \noalign{\vspace{\expspace}}
 \multicolumn{1}{r@{\cspace}|@{\cspace}}{Query}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsusp$}&\multicolumn{2}{c@{\cspace}|@{\cspace}}{$\qsuspusr$}&\multicolumn{2}{c}{$\qsuspa$}\\
 \multicolumn{1}{r@{\cspace}|@{\cspace}}{Dataset}&GC&MI&GC&MI&GC&MI\\
 \hline
-\input{./exps_suspb.tex}
+\csname @@input\endcsname ./exps_suspb.tex
 \end{tabular}
 
 \caption{Experiment with the queries $\qsusp$, $\qsuspusr$, and $\qsuspa$.
