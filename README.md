@@ -150,16 +150,16 @@ Non-terminals are enclosed in curly braces.
 Database Syntax
 
 ```
-{d} :=   %empty
-       | {ID}({s})
-       | {ID}({s}) {d}
+{d} :=    %empty
+        | {ID}({s}) {d}
 
 {s} ::=   %empty
         | {NUM}
         | {NUM} , {s}
 ```
 
-where `{NUM}` is a nonnegative integer and `{ID}` is an identifier.
+where `{NUM}` is a nonnegative integer
+and `{ID}` is an identifier (atomic predicate).
 
 ---
 

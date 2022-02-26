@@ -216,7 +216,7 @@ let fresh_var fv =
     else var
   in fresh_var_rec 0
 
-(* Definition 23 *)
+(* Definition 2.9 *)
 let rec rename i j f =
   let rename_var i j v = if i = v then j else v in
   let rec rename_trm i j = function
@@ -423,7 +423,7 @@ let rec powset = function
   | [] -> [[]]
   | x :: xs -> let xss = powset xs in List.map (fun xs -> x :: xs) xss @ xss
 
-(* Lemma 28 *)
+(* Lemma 4.21 *)
 let agg1 vs f =
   let (fps, feqs, fnexs, fns) = splitconj (flatten_conj f) in
   let ns = fnexs @ fns in
@@ -439,7 +439,7 @@ let agg1 vs f =
     let nexnps = List.map (fun f -> Neg (exists vs f)) nps in
     disj [sconj (exps :: nexnps); exists [c; c'] (sconj (Cnt (c, vs, cps) :: Cnt (c', vs, disj nps) :: Neg (Eq (c, Var c')) :: []))]
 
-(* Lemma 29 *)
+(* Lemma 4.22 *)
 let agg2 s' vs f' =
   let (fps, feqs, fnexs, fns) = splitconj (flatten_conj f') in
   let ns = fnexs @ fns in
@@ -526,7 +526,7 @@ let agg_of_fmla cost f =
       disj (List.map (fun f'' -> ms (agg1 vs f'')) (flatten_disj (aux f')))
   in ssrnf (aux (ms f))
 
-(* Definition 24 *)
+(* Definition 2.10 *)
 let var_bot x f =
   let rec aux = function
     | False -> False
