@@ -17,12 +17,30 @@ This repository is the supplementary material for Martin Raszyk's PhD thesis.
 
 ---
 
+# Build
+
+We recommend running the experiments using `docker` and the provided `Dockerfile`.
+Please set up at least 8 GiB of main memory for your Docker container.
+Note that the first command below will take some time to finish.
+```
+sudo docker build --no-cache -t rc2sql .
+sudo docker run -it rc2sql
+```
+Once you run the second command above you will
+obtain a shell with all the tools installed.
+
+We observed that several queries (e.g., the 2nd query in the MEDIUM experiment) time out
+if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
+Hence, we set `enable_nestloop = off` in all our experiments (l. 78 in Dockerfile).
+
+---
+
 # Directory Structure:
 
 - `paper.pdf` - extended report on RC2SQL
 - `Dockerfile` - Dockerfile for this supplementary material
 - `test_all.sh` - script to run correctness tests for query evaluation
-- `run.sh` - script to run experiments
+- `run.sh` - script to run all experiments
 - `bold.*` - scripts for postprocessing evaluation results (e.g., highlighting fastest execution)
 - `main.tex` - template of a LaTeX document with evaluation results
 - `exps_*.sh` - scripts to run the individual experiments
@@ -56,27 +74,9 @@ using the proof assistant [Isabelle/HOL](https://isabelle.in.tum.de/)
 - `ddd-rc/` - our implementation of a tool using DDDs for evaluating RC queries
 - `ldd-r6438/` - the implementation of Linear Decision Diagrams (LDD)
 - `ldd-rc/` - our implementation of a tool using LDDs for evaluating RC queries
-- `monpoly/` - the *MonPoly* tool and its verified core (*VeriMon*)
+- `monpoly/` - the *MonPoly* tool and its verified core *(VeriMon)*
 - `monpoly-reg-1.0/` - the *MonPoly-Reg* tool
 - `radb/` - our modification of the *radb* tool
-
----
-
-# Build
-
-We recommend running the experiments using `docker` and the provided `Dockerfile`.
-Please set up at least 8 GiB of main memory for your Docker container.
-Note that the first command below will take some time to finish.
-```
-sudo docker build --no-cache -t rc2sql .
-sudo docker run -it rc2sql
-```
-Once you run the second command above you will
-obtain a shell with all the tools installed.
-
-We observed that several queries (e.g., the 2nd query in the MEDIUM experiment) time out
-if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
-Hence, we set `enable_nestloop = off` in all our experiments (l. 78 in Dockerfile).
 
 ---
 
