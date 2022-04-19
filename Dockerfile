@@ -1,4 +1,4 @@
-FROM ubuntu:21.10
+FROM ubuntu:20.04
 
 RUN apt-get update
 RUN apt-get upgrade -y
@@ -18,13 +18,6 @@ RUN opam install -y ocamlbuild ocamlfind dune dune-build-info menhir qcheck zari
 RUN opam switch create 4.05.0
 RUN opam switch default
 
-# Amazon
-RUN mkdir -p amazon
-RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/categoryFiles/Gift_Cards.json.gz
-RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Gift_Cards.json.gz
-RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/categoryFiles/Musical_Instruments.json.gz
-RUN cd amazon; wget http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Musical_Instruments.json.gz
-
 # MonPoly/VeriMon
 RUN git clone https://bitbucket.org/jshs/monpoly.git
 RUN eval `opam config env`; cd monpoly; dune build --release; dune install
@@ -38,7 +31,6 @@ USER rcsql
 
 # Amazon
 RUN make -C amazon
-RUN cd amazon; python3 amazon.py Gift_Cards; python3 amazon.py Musical_Instruments
 
 # MonPoly-REG
 RUN cd /home/rcsql/monpoly-reg-1.0/src/mona; ./configure; make

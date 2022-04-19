@@ -6,7 +6,7 @@ then
 fi
 if [ "${inf}" == "" ]
 then
-  fv=$(./monpoly/monpoly -sig "${pref}sig" -formula "${pref}fin" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified -check)
+  fv=$(./monpoly/monpoly -sig "${pref}sig" -formula "${pref}fin" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified -check 2>&1)
   fin=$(./monpoly/monpoly -sig "${pref}sig" -log "${pref}log" -formula "${pref}fin" -no_rw -nonewlastts -nofilterrel -nofilteremptytp -verified)
   if [ "$?" -ne 0 ]
   then

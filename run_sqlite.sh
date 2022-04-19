@@ -12,7 +12,7 @@ then
   then
     exit 1
   fi
-  fv=$(echo "${q}" | grep ":number" | sed "s/ //g" | sed "s/:number//g")
+  fv=$(echo "${q}" | grep ":number" | sed "s/ //g" | sed "s/:number//g" | grep -o "(.*)")
   fin=$(echo "${q}" | grep "^[0-9, ]*$")
   echo "Finite"
   echo "${fv}"

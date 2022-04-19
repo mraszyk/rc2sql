@@ -35,7 +35,7 @@ setup(
     ],
 
     packages=find_packages(),
-    install_requires=['sqlalchemy', 'antlr4-python3-runtime'],
+    install_requires=['sqlalchemy', 'antlr4-python3-runtime >= 4.9.2, < 4.10'],
     python_requires='>=3.5',
     include_package_data=True,
     entry_points={

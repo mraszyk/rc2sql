@@ -23,8 +23,8 @@ We recommend running the experiments using `docker` and the provided `Dockerfile
 Please set up at least 8 GiB of main memory for your Docker container.
 Note that the first command below will take some time to finish.
 ```
-sudo docker build --no-cache -t rc2sql .
-sudo docker run -it rc2sql
+sudo docker build --platform linux/amd64 --no-cache -t rc2sql .
+sudo docker run --platform linux/amd64 -it rc2sql
 ```
 Once you run the second command above you will
 obtain a shell with all the tools installed.
@@ -212,6 +212,7 @@ in the database before every query evaluation in our experiments.
 To reproduce the experiments from the paper, run
 
 ```
+$ ./amazon.sh
 $ ./run.sh
 ```
 

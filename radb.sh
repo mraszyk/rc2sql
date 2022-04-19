@@ -3,7 +3,7 @@ function sqlofra() {
   suf="${2}"
   flags="${3}"
   echo -n "--"
-  /usr/local/bin/radb ${flags:+"${flags}"} "${pref}.rdb" < "${pref}.${suf}" | grep ":number" | sed "s/ //g" | sed "s/:number//g"
+  /usr/local/bin/radb ${flags:+"${flags}"} "${pref}.rdb" < "${pref}.${suf}" | grep ":number" | sed "s/ //g" | sed "s/:number//g" | grep -o "(.*)"
   /usr/local/bin/radb ${flags:+"${flags}"} "${pref}.rdb" -d < "${pref}.${suf}" | grep -oz "SQL generated:.*:number" | tail -n +2 | head -n -1
 }
 
