@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y bc bison ca-certificates clang flex git libgmp3-dev libssl-dev locales make mysql-server mysql-client m4 opam openjdk-8-jdk postgresql postgresql-contrib python3 python3-setuptools texlive vim
+RUN DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y automake bc bison ca-certificates clang flex git libgmp3-dev libssl-dev locales make mysql-server mysql-client m4 opam openjdk-8-jdk postgresql postgresql-contrib python3 python3-setuptools texlive vim
 
 RUN adduser --disabled-password --gecos "" rcsql
 RUN locale-gen en_US.UTF-8 &&\
