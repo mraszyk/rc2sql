@@ -76,6 +76,7 @@ RUN echo 'local-infile=1' >> /etc/mysql/my.cnf
 
 # Startup
 RUN echo 'export LD_LIBRARY_PATH=/usr/local/lib' >> /home/rcsql/.bashrc
+RUN echo 'alias mysql="mysql -h 127.0.0.1 -P 3306 -u rcsql"' >> /home/rcsql/.bashrc
 RUN echo "/etc/init.d/postgresql start; su - postgres -c 'psql --command \"CREATE ROLE rcsql WITH SUPERUSER LOGIN;\"'; su - postgres -c 'psql --command \"CREATE DATABASE rcsql;\"'" >> /root/.bashrc
 RUN echo '/etc/init.d/mysql start; mysql -e "CREATE DATABASE db;"; mysql -e "CREATE USER rcsql@localhost;"; mysql -e "GRANT ALL ON *.* to rcsql@localhost;"' >> /root/.bashrc
 RUN echo 'su - rcsql' >> /root/.bashrc

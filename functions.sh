@@ -71,12 +71,12 @@ function killPSQL() {
 function killMSQL() {
   while [[ 1 ]]
   do
-    kil=$(mysql -u rcsql -e "SELECT id FROM information_schema.processlist WHERE db = 'db';" -ss | awk '{print "KILL "$1";"}')
+    kil=$(mysql -h 127.0.0.1 -P 3306 -u rcsql -e "SELECT id FROM information_schema.processlist WHERE db = 'db';" -ss | awk '{print "KILL "$1";"}')
     if [[ "${kil}" == "" ]]
     then
       break
     fi
-    echo ${kil} | mysql -u rcsql &> /dev/null
+    echo ${kil} | mysql -h 127.0.0.1 -P 3306 -u rcsql &> /dev/null
   done
 }
 

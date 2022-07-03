@@ -37,7 +37,7 @@ symlinks "${pref}"
 ./radb.sh "${pref}"
 
 psql < "${pref}.psql" > /dev/null
-mysql -u rcsql --local-infile=1 < "${pref}.msql"
+mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < "${pref}.msql"
 
 for s in ${sufs}
 do

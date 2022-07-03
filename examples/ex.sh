@@ -15,7 +15,7 @@ symlinks /home/rcsql/examples/ex # 1st argument of symlinks must be ABSOLUTE pat
 ./radb.sh examples/ex
 
 psql < examples/ex.psql
-mysql -u rcsql --local-infile=1 < examples/ex.msql
+mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < examples/ex.msql
 
 ./run_vmon.sh examples/ex.a > examples/ex.oa    # RC2SQL
 diff examples/ex.oa examples/ex.eoa
@@ -54,20 +54,20 @@ diff examples/ex.oma examples/ex.eoma
 
 python3 cnt.py examples/ex.apsqlfin | psql
 python3 cnt.py examples/ex.apsqlinf | psql
-python3 cnt.py examples/ex.amsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
-python3 cnt.py examples/ex.amsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
+python3 cnt.py examples/ex.amsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.amsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
 python3 cnt.py examples/ex.spsqlfin | psql
 python3 cnt.py examples/ex.spsqlinf | psql
-python3 cnt.py examples/ex.smsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
-python3 cnt.py examples/ex.smsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
+python3 cnt.py examples/ex.smsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.smsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
 python3 cnt.py examples/ex.vapsqlfin | psql
 python3 cnt.py examples/ex.vapsqlinf | psql
-python3 cnt.py examples/ex.vamsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
-python3 cnt.py examples/ex.vamsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
+python3 cnt.py examples/ex.vamsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vamsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
 python3 cnt.py examples/ex.vspsqlfin | psql
 python3 cnt.py examples/ex.vspsqlinf | psql
-python3 cnt.py examples/ex.vsmsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
-python3 cnt.py examples/ex.vsmsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -u rcsql
+python3 cnt.py examples/ex.vsmsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vsmsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
 
 ./test_eval.sh 8 4 2 1 10 10 0 0
 ./test_ranf.sh 8 4 2 1 10 10 0 0
