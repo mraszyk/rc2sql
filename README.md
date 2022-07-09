@@ -31,7 +31,7 @@ obtain a shell with all the tools installed.
 
 We observed that several queries (e.g., the 2nd query in the MEDIUM experiment) time out
 if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
-Hence, we set `enable_nestloop = off` in all our experiments (l. 78 in Dockerfile).
+Hence, we set `enable_nestloop = off` in all our experiments (l. 70 in Dockerfile).
 
 ---
 
@@ -262,25 +262,25 @@ $ ./src/rtrans.native z_0
 $ ./src/vgtrans.native z_0
 $ ./radb.sh z_0
 $ psql < z_0.psql
-$ python3 cnt.py z_0.apsqlfin | psql     # cost of RC2SQL
+$ python3 cnt.py z_0.asqlfin | psql     # cost of RC2SQL
  cost
 ------
  3287
 (1 row)
 
-$ python3 cnt.py z_0.spsqlfin | psql     # cost of RC2SQL-
+$ python3 cnt.py z_0.ssqlfin | psql     # cost of RC2SQL-
   cost  
 --------
  116140
 (1 row)
 
-$ python3 cnt.py z_0.vapsqlfin | psql    # cost of VGT
+$ python3 cnt.py z_0.vasqlfin | psql    # cost of VGT
  cost 
 ------
  3605
 (1 row)
 
-$ python3 cnt.py z_0.vspsqlfin | psql    # cost of VGT-
+$ python3 cnt.py z_0.vssqlfin | psql    # cost of VGT-
   cost   
 ---------
  9293760

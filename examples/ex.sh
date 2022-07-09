@@ -52,22 +52,22 @@ diff examples/ex.oma examples/ex.eoma
 ./tools/cmp examples/ex.ail examples/ex.omvs
 ./tools/cmp examples/ex.ail examples/ex.mpreg
 
-python3 cnt.py examples/ex.apsqlfin | psql
-python3 cnt.py examples/ex.apsqlinf | psql
-python3 cnt.py examples/ex.amsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.amsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.spsqlfin | psql
-python3 cnt.py examples/ex.spsqlinf | psql
-python3 cnt.py examples/ex.smsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.smsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.vapsqlfin | psql
-python3 cnt.py examples/ex.vapsqlinf | psql
-python3 cnt.py examples/ex.vamsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.vamsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.vspsqlfin | psql
-python3 cnt.py examples/ex.vspsqlinf | psql
-python3 cnt.py examples/ex.vsmsqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
-python3 cnt.py examples/ex.vsmsqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.asqlfin | psql
+python3 cnt.py examples/ex.asqlinf | psql
+python3 cnt.py examples/ex.asqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.asqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.ssqlfin | psql
+python3 cnt.py examples/ex.ssqlinf | psql
+python3 cnt.py examples/ex.ssqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.ssqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vasqlfin | psql
+python3 cnt.py examples/ex.vasqlinf | psql
+python3 cnt.py examples/ex.vasqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vasqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vssqlfin | psql
+python3 cnt.py examples/ex.vssqlinf | psql
+python3 cnt.py examples/ex.vssqlfin | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
+python3 cnt.py examples/ex.vssqlinf | sed "s/WITH/USE db;\nWITH/" | mysql -h 127.0.0.1 -P 3306 -u rcsql
 
 ./test_eval.sh 8 4 2 1 10 10 0 0
 ./test_ranf.sh 8 4 2 1 10 10 0 0

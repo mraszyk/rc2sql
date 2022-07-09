@@ -49,8 +49,6 @@ def main():
                         help='verbose output')
     parser.add_argument('--debug', '-d', action='store_true',
                         help='debug output')
-    parser.add_argument('--mysql', '-m', action='store_true',
-                        help='use LEFT JOIN instead of EXCEPT')
     parser.add_argument('--run', '-r', action='store_true',
                         help='execute all statements')
     parser.add_argument('source', type=str, nargs='?', default=configparser.DEFAULTSECT,

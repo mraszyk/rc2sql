@@ -813,16 +813,10 @@ class LeftJoin(RelExpr):
             for i, (a0, a1) in enumerate(zip(self.inputs[0].type.attrs, self.inputs[1].type.attrs)):
                 if a0.type != a1.type or a0.name != a1.name:
                     is_diff = False
-        if is_diff and not self.cmdargs.mysql:
-            return 'SELECT * FROM {} {} SELECT * FROM {}'\
-                   .format(self.inputs[0].type.sql_rel(),
-                           'EXCEPT',
-                           self.inputs[1].type.sql_rel())
-        else:
-            return 'SELECT {} FROM {} LEFT JOIN {} AS {}{}'\
-                   .format(select,
-                           self.inputs[0].type.sql_rel(), self.inputs[1].type.sql_rel(), right,
-                           where)
+        return 'SELECT {} FROM {} LEFT JOIN {} AS {}{}'\
+               .format(select,
+                       self.inputs[0].type.sql_rel(), self.inputs[1].type.sql_rel(), right,
+                       where)
 
 class SetOp(RelExpr):
     def __init__(self, left, right):

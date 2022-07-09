@@ -1,5 +1,5 @@
 pref="${1}"
-inf=$(psql < ${pref}psqlinf | tail -n 2)
+inf=$(psql < ${pref}sqlinf | tail -n 2)
 if [ "$?" -ne 0 ]
 then
   exit 1
@@ -8,13 +8,13 @@ if [ "$(echo "${inf}" | grep -o '1 row')" != "" ]
 then
   echo "Infinite"
 else
-  fin=$(psql < ${pref}psqlfin)
+  fin=$(psql < ${pref}sqlfin)
   if [[ "$?" -ne 0 ]]
   then
     exit 1
   fi
   echo "Finite"
-  fv=$(cat ${pref}psqlfin | head -n 1 | sed "s/--//")
+  fv=$(cat ${pref}sqlfin | head -n 1 | sed "s/--//")
   if [ "${fv}" == "(t)" ]
   then
     echo "()"

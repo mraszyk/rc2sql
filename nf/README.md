@@ -4,7 +4,7 @@ in Example 2.18 (SRNF vs ENF) and Section 4.2.6 (LEFT JOIN vs EXCEPT).
 To run the benchmarks, execute the script `run.sh` as shown below
 in the directory whose name is shown next to the respective query.
 
-The output lists the queries and execution times.
+The output lists the queries and execution times (up to one minute).
 
 enf1: P(x, y) AND NOT (Q(x) AND R(y))
 =====================================
@@ -13,7 +13,7 @@ $ ./run.sh 400 200 0
 NOT IN too slow
 
 $ ./run.sh 4000 2000 1
-LEFT JOIN slower than EXCEPT on equal attributes
+LEFT JOIN faster than EXCEPT on equal attributes
 Query 1, 2 are in ENF
 Query 3, 4 are in SRNF (much faster)
 
@@ -32,7 +32,7 @@ Query 0 uses nested loop after this threshold
 Filter: (NOT (SubPlan 1))
 
 $ ./run.sh 200000 175000 1
-LEFT JOIN slower than EXCEPT on equal attributes
+LEFT JOIN faster than EXCEPT on equal attributes
 LEFT JOIN faster than EXCEPT on distinct attributes
 Query 1, 2 are in ENF
 Query 3, 4, 5 are in SRNF (slightly faster)
@@ -56,7 +56,7 @@ Query 0 uses nested loop after this threshold
 Filter: (NOT (SubPlan 1))
 
 $ ./run.sh 400000 300000 1
-LEFT JOIN slower than EXCEPT on equal attributes
+LEFT JOIN faster than EXCEPT on equal attributes
 
 left2: P(x, y) AND NOT Q(x)
 ==============================

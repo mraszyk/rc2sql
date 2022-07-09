@@ -22,6 +22,7 @@ timeout "${to}" /home/rcsql/src/rtrans.native "${pref}" "${i}"
 status="${?}"
 checkstat "RC2SQL"
 
+# "a" must come before "s"
 sufs="a s"
 
 if [[ "${fvgen}" == "1" ]]
@@ -52,6 +53,7 @@ do
   checkstat "${s}m"
   killMSQL
   mstatus="${status}"
+
   d=$(/home/rcsql/tools/cmp "${pref}.${s}p" "${pref}.${s}m")
   if [[ "${d}" != "OK" && "${pstatus}" == "0" && "${mstatus}" == "0" ]]
   then
@@ -66,24 +68,22 @@ do
   then
     avstatus="${status}"
   fi
+
   d=$(/home/rcsql/tools/cmp "${pref}.${s}p" "${pref}.${s}v")
   if [[ "${d}" != "OK" && "${pstatus}" == "0" && "${vstatus}" == "0" ]]
   then
     echo "${d}(p-v): ${pref}/${s}" >> log.txt
   fi
 
-  for conf in "-m" ""
-  do
-    conff="$(echo ${conf} | sed "s/[ -]//g")"
-    timeout "${to}" bash -c "/home/rcsql/run_sqlite.sh ${pref} ${s} ${conf}" > "${pref}.${conff}.${s}l"
-    status="${?}"
-    checkstat "${conff}.${s}l"
-    d=$(/home/rcsql/tools/cmp "${pref}.${s}p" "${pref}.${conff}.${s}l")
-    if [[ "${d}" != "OK" && "${pstatus}" == "0" && "${status}" == "0" ]]
-    then
-      echo "${d}(p-${conff}.l): ${pref}/${s}" >> log.txt
-    fi
-  done
+  timeout "${to}" bash -c "/home/rcsql/run_sqlite.sh ${pref} ${s}" > "${pref}.${s}l"
+  status="${?}"
+  checkstat "${s}l"
+
+  d=$(/home/rcsql/tools/cmp "${pref}.${s}p" "${pref}.${s}l")
+  if [[ "${d}" != "OK" && "${pstatus}" == "0" && "${status}" == "0" ]]
+  then
+    echo "${d}(p-l): ${pref}/${s}" >> log.txt
+  fi
 
   d=$(/home/rcsql/tools/cmp "${pref}.${s}v" "${pref}.av")
   if [[ "${d}" != "OK" && "${vstatus}" == "0" && "${avstatus}" == "0" ]]

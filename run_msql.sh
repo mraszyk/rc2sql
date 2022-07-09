@@ -1,5 +1,5 @@
 pref="${1}"
-inf=$(cat ${pref}msqlinf | sed "s/^--.*$/USE db;/" | mysql -h 127.0.0.1 -P 3306 -u rcsql 2> /dev/null | tail -n 1)
+inf=$(cat ${pref}sqlinf | sed "s/^--.*$/USE db;/" | mysql -h 127.0.0.1 -P 3306 -u rcsql 2> /dev/null | tail -n 1)
 if [ "$?" -ne 0 ]
 then
   exit 1
@@ -8,13 +8,13 @@ if [ "$(echo "${inf}" | grep -o '1')" != "" ]
 then
   echo "Infinite"
 else
-  fin=$(cat ${pref}msqlfin | sed "s/^--.*$/USE db;/" | mysql -h 127.0.0.1 -P 3306 -u rcsql 2> /dev/null)
+  fin=$(cat ${pref}sqlfin | sed "s/^--.*$/USE db;/" | mysql -h 127.0.0.1 -P 3306 -u rcsql 2> /dev/null)
   if [[ "$?" -ne 0 ]]
   then
     exit 1
   fi
   echo "Finite"
-  fv=$(cat ${pref}msqlfin | head -n 1 | sed "s/--//")
+  fv=$(cat ${pref}sqlfin | head -n 1 | sed "s/--//")
   if [ "${fv}" == "(t)" ]
   then
     echo "()"

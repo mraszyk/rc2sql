@@ -1,13 +1,13 @@
 pref="${1}"
 suf="${2}"
-inf=$(/usr/local/bin/radb --run ${@:3} "${pref}.rdb" < "${pref}.${suf}rinf")
+inf=$(/usr/local/bin/radb --run "${pref}.rdb" < "${pref}.${suf}rinf")
 if [ "$?" -ne 0 ]
 then
   exit 1
 fi
 if [ "$(echo ${inf} | grep -o "1 tuple returned")" == "" ]
 then
-  q=$(/usr/local/bin/radb --run ${@:3} "${pref}.rdb" < "${pref}.${suf}rfin")
+  q=$(/usr/local/bin/radb --run "${pref}.rdb" < "${pref}.${suf}rfin")
   if [ "$?" -ne 0 ]
   then
     exit 1
