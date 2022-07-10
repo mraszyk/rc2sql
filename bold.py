@@ -26,11 +26,13 @@ for l in ls:
     data.append(l[:-2].split('&'))
 assert(len(data) > 0)
 
-mins = [None for i in range(len(data[0]))]
+mins = None
 for l in data:
   ml = re.search("multicolumn", '&'.join(l))
   if ml is not None:
     continue
+  if mins is None:
+    mins = [None for i in range(len(l))]
   assert(len(l) == len(mins))
   for j in range(len(l)):
     v = safeFloat(l[j])
@@ -41,8 +43,9 @@ for l in data:
         mins[j] = min(mins[j], v)
 for l in data:
   o = []
+  trtime = re.search("trtime", '&'.join(l))
   for j in range(len(l)):
-    if mins[j] is not None and safeFloat(l[j]) == mins[j] and sys.argv[2] == "yes":
+    if mins[j] is not None and safeFloat(l[j]) == mins[j] and sys.argv[2] == "yes" and trtime is None:
       o.append('\\textbf{}{}{}'.format('{', l[j], '}'))
     else:
       o.append(l[j])
