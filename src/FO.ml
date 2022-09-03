@@ -671,9 +671,9 @@ let opt_cov cost =
 (* Figure 4.2 *)
 let rb restr cov cost =
   let rec aux = function
-    | Neg f -> Neg (aux f)
-    | Disj (f, g) -> Disj (aux f, aux g)
-    | Conj (f, g) -> Conj (aux f, aux g)
+    | Neg f -> cp (Neg (aux f))
+    | Disj (f, g) -> cp (Disj (aux f, aux g))
+    | Conj (f, g) -> cp (Conj (aux f, aux g))
     | Exists (v, f) ->
       let rec r acc = function
         | [] -> List.rev acc
@@ -686,7 +686,7 @@ let rb restr cov cost =
                                   var_bot v h ::
                                   List.map (fun x -> rename v x h) (eqs v cs) @ hs))
       in disj (List.map (exists [v]) (r [] (flatten_disj (aux f))))
-    | f -> f
+    | f -> cp f
   in aux
 
 (* Figure 4.3 *)
@@ -712,7 +712,7 @@ let split restr cov cost f =
   in let f' = rb restr cov cost f
   in let (qfin, qinf) = aux ([], []) [(f', [])]
   in let (qfin, qinf) = foo ([], qinf) qfin
-  in (disj (List.map (fun (f, es) -> conj (f :: List.map (fun (x, y) -> Eq (x, Var y)) es)) qfin),
+  in (disj (List.map (fun (f, es) -> sconj (f :: List.map (fun (x, y) -> Eq (x, Var y)) es)) qfin),
       rb restr cov cost (disj (List.map (fun f -> exists (fv_fmla f) f) qinf)))
 
 let sr f =
