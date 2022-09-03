@@ -24,7 +24,6 @@ do
   done
 
   line "\$\\eparam=${minl}\$" run01APSQL
-  line "\$\\eparam=${minl}\$" run01AMSQL
 
   rm -f z_*
 done
