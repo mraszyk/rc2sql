@@ -29,8 +29,8 @@ sudo docker run --platform linux/amd64 -it rc2sql
 Once you run the second command above you will
 obtain a shell with all the tools installed.
 
-We observed that several queries (e.g., the 2nd query in the MEDIUM experiment) time out
-if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
+We observed that several queries (e.g., the 4th and 5th query in the MEDIUM experiment)
+take much longer time if the setting `enable_nestloop = off` is omitted in the PostgreSQL configuration.
 Hence, we set `enable_nestloop = off` in all our experiments (l. 70 in Dockerfile).
 
 ---
@@ -56,6 +56,7 @@ and their translation to SQL by comparing PostgreSQL, MySQL, SQLite, and VeriMon
 (which is verified and thus its output is guaranteed to be correct)
 - `cnt.py` - script converting an SQL query produced by *radb*
 into an SQL query computing its *query cost*
+- `amazon.sh` - script to setup experiments in Figure 4.6
 - `functions.sh` - helper bash functions
 - `amazon/` - contains scripts for experiments in Figure 4.6
 - `examples/` - example queries from this README
@@ -301,7 +302,7 @@ Please refer to the `README.md` file in the folder `nf/` for more details.
 
 ---
 
-# Unsound results produced by MySQL
+# Testing RANF to SQL translation
 
 Running `for i in {0..9}; do ./test_ranf.sh 14 4 2 1 10 2 1 ${i}; done`
 tests the translation of the queries used in the SMALL experiment
@@ -309,37 +310,17 @@ from RANF to SQL by comparing PostgreSQL, MySQL, SQLite, and VeriMon
 (which is verified and thus its output is guaranteed to be correct).
 Here we use `n = 10` as the script `test_ranf.sh` cannot be used with a higher value of the parameter `n`.
 
-The output (in the file `log.txt`)
-```
-RE: /home/rcsql/z_14_4_2_1_10_2_1_1/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_2/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_3/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_3/sm
-RE: /home/rcsql/z_14_4_2_1_10_2_1_3/vam
-RE: /home/rcsql/z_14_4_2_1_10_2_1_4/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_4/vam
-RE: /home/rcsql/z_14_4_2_1_10_2_1_6/vam
-RE: /home/rcsql/z_14_4_2_1_10_2_1_8/am
-RE: /home/rcsql/z_14_4_2_1_10_2_1_8/vam
-```
-reports 10 inconsistencies between MySQL and PostgreSQL.
 The verdict `DIFF` stands for unsound output while `RE` denotes a runtime error.
-For instance, the first line reports a runtime error in MySQL (suffix `m`)
-on the optimized query (prefix `a`).
-`DIFF(p-m)` denotes an output inconsistency between PostgreSQL and MySQL.
-`DIFF(p-*.l)` denotes an output inconsistency between PostgreSQL and SQLite.
-`DIFF(p-v)` denotes an output inconsistency between PostgreSQL and VeriMon.
-`DIFF(v-v)` denotes an output inconsistency between optimized and unoptimized RANF queries.
-`DIFF(dg)` denotes a violation of Data Golf properties (positive set is not contained
-in the result or negative set has nonempty intersection with the result)
-
-Note. We remark that the output of MySQL can be nondeterministic, i.e.,
-some of the above inconsistencies might not be reported at every execution
-of `test_ranf.sh`.
+ - `DIFF(p-m)` denotes an output inconsistency between PostgreSQL and MySQL.
+ - `DIFF(p-l)` denotes an output inconsistency between PostgreSQL and SQLite.
+ - `DIFF(p-v)` denotes an output inconsistency between PostgreSQL and VeriMon.
+ - `DIFF(v-v)` denotes an output inconsistency between optimized and unoptimized RANF queries.
+ - `DIFF(dg)` denotes a violation of Data Golf properties (positive set is not contained
+in the result or negative set has nonempty intersection with the result).
 
 ---
 
-# Tests
+# Testing RC to RANF translation
 
 To test RC2SQL/VGTrans against the formally verified implementation
 of the approach by Ailamazyan et al. run

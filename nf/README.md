@@ -35,7 +35,7 @@ $ ./run.sh 200000 175000 1
 LEFT JOIN faster than EXCEPT on equal attributes
 LEFT JOIN faster than EXCEPT on distinct attributes
 Query 1, 2 are in ENF
-Query 3, 4, 5 are in SRNF (slightly faster)
+Query 3, 4, 5 are in SRNF (similar performance)
 
 enf3: P(x, y) AND (Q(x) OR NOT R(y))
 ====================================

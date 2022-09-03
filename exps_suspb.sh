@@ -41,11 +41,15 @@ do
   init > /dev/null
 done
 
-line "\\tool" run01APSQL
-line "\\toolnonopt" run01SPSQL
-
-line "\\vgtool" run02APSQL
-line "\\vgtoolnonopt" run02SPSQL
+line "\\tool\\psqlsub" run01APSQL
+line "\\tool\\msqlsub" run01AMSQL
+line "\\toolnonopt\\psqlsub" run01SPSQL
+line "\\toolnonopt\\msqlsub" run01SMSQL
+  
+line "\\vgtool\\psqlsub" run02APSQL
+line "\\vgtool\\msqlsub" run02AMSQL
+line "\\vgtoolnonopt\\psqlsub" run02SPSQL
+line "\\vgtoolnonopt\\msqlsub" run02SMSQL
 
 echo "\\hline"
 

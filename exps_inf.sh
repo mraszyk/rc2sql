@@ -22,8 +22,10 @@ done
 echo "\\\\"
 echo "\\hline"
 
-line "\\tool" run01APSQL
-line "\\toolnonopt" run01SPSQL
+line "\\tool\\psqlsub" run01APSQL
+line "\\tool\\msqlsub" run01AMSQL
+line "\\toolnonopt\\psqlsub" run01SPSQL
+line "\\toolnonopt\\msqlsub" run01SMSQL
 
 echo "\\hline"
 

@@ -107,24 +107,23 @@ function symlinks() {
   ln -sf "${pref}.log" "${pref}.valog"
 }
 
-function run01SPSQL() {
-  run "psql < z_${i}.psql; ./run_psql.sh z_${i}.s"
-  killPSQL
-}
 function run01APSQL() {
   run "psql < z_${i}.psql; ./run_psql.sh z_${i}.a"
   killPSQL
 }
-
-function run02SPSQL() {
-  if [[ -f z_${i}.vsfin ]]
-  then
-    run "psql < z_${i}.psql; ./run_psql.sh z_${i}.vs"
-    killPSQL
-  else
-    echo -n "\\vgtna"
-  fi
+function run01AMSQL() {
+  run "mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < z_${i}.msql; ./run_msql.sh z_${i}.a"
+  killMSQL
 }
+function run01SPSQL() {
+  run "psql < z_${i}.psql; ./run_psql.sh z_${i}.s"
+  killPSQL
+}
+function run01SMSQL() {
+  run "mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < z_${i}.msql; ./run_msql.sh z_${i}.s"
+  killMSQL
+}
+
 function run02APSQL() {
   if [[ -f z_${i}.vafin ]]
   then
@@ -134,6 +133,34 @@ function run02APSQL() {
     echo -n "\\vgtna"
   fi
 }
+function run02AMSQL() {
+  if [[ -f z_${i}.vafin ]]
+  then
+    run "mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < z_${i}.msql; ./run_msql.sh z_${i}.va"
+    killMSQL
+  else
+    echo -n "\\vgtna"
+  fi
+}
+function run02SPSQL() {
+  if [[ -f z_${i}.vsfin ]]
+  then
+    run "psql < z_${i}.psql; ./run_psql.sh z_${i}.vs"
+    killPSQL
+  else
+    echo -n "\\vgtna"
+  fi
+}
+function run02SMSQL() {
+  if [[ -f z_${i}.vsfin ]]
+  then
+    run "mysql -h 127.0.0.1 -P 3306 -u rcsql --local-infile=1 < z_${i}.msql; ./run_msql.sh z_${i}.vs"
+    killMSQL
+  else
+    echo -n "\\vgtna"
+  fi
+}
+
 function run03() {
   run "./ailamazyan/src/ail.native -fmla z_${i}.fo -db z_${i}.db"
 }
