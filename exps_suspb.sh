@@ -1,4 +1,4 @@
-to=400
+to=300
 real=10
 
 ulimit -s 1048576

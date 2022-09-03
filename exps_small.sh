@@ -1,4 +1,4 @@
-to=200
+to=300
 ulimit -s 1048576
 
 . "./functions.sh"
