@@ -8,8 +8,8 @@
 
 %%% Parameters
 \newcommand{\eparam}{n}
-\newcommand{\togolf}{200s}
-\newcommand{\tosusp}{400s}
+\newcommand{\togolf}{300s}
+\newcommand{\tosusp}{300s}
 
 %%% Query names
 \newcommand{\qry}{Q}
@@ -24,6 +24,8 @@
 \newcommand{\infexp}{\textsc{Infinite}}
 
 %%% Tool names
+\newcommand{\psqlsub}{\ensuremath{^{\mathsf{P}}}}
+\newcommand{\msqlsub}{\ensuremath{^{\mathsf{M}}}}
 \newcommand{\tool}{\ensuremath{\mathsf{RC2SQL}}}
 \newcommand{\toolnonopt}{\ensuremath{\mathsf{RC2SQL}^{-}}}
 \newcommand{\vgtool}{\ensuremath{\mathsf{VGT}}}
@@ -61,7 +63,7 @@
 \end{tabular}
 
 \caption{Experiments \smallexp{}, \mediumexp{}, \largeexp{}, and \infexp{}.
-We use the following abbreviations: TO = Timeout of \togolf{}, RE = Runtime Error.}
+We use the following abbreviations: \psqlsub{} = \ensuremath{\mathsf{PostgreSQL}}, \msqlsub{} = \ensuremath{\mathsf{MySQL}}, TO = Timeout of \togolf{}, RE = Runtime Error.}
 \end{figure}
 
 \begin{figure}[H]
@@ -78,7 +80,7 @@ We use the following abbreviations: TO = Timeout of \togolf{}, RE = Runtime Erro
 \end{tabular}
 
 \caption{Experiment with the queries $\qsusp$, $\qsuspusr$, and $\qsuspa$.
-We use the following abbreviations: GC = Gift Cards dataset, MI = Musical Instruments dataset, TO = Timeout of \tosusp{}.}
+We use the following abbreviations: \psqlsub{} = \ensuremath{\mathsf{PostgreSQL}}, \msqlsub{} = \ensuremath{\mathsf{MySQL}}, GC = Gift Cards dataset, MI = Musical Instruments dataset, TO = Timeout of \tosusp{}.}
 \label{fig:suspexps}
 \end{figure}
 \end{document}

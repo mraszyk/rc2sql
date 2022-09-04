@@ -16,7 +16,7 @@ function run() {
 
   local t="$(echo "scale=1; ${delta}/1000000000" | bc -l)"
   if [[ "${status}" == "0" && "$(echo "${t} < ${to}" | bc -l)" == "1" ]]; then
-    printf "%.2f s" "${t}"
+    printf "%.1f s" "${t}"
     ts+=("${t}")
   elif [[ "${status}" == "124" || "$(echo "${t} >= ${to}" | bc -l)" == "1" ]]; then
     echo -n "TO"
@@ -38,7 +38,7 @@ function runNoTO() {
 
   local t="$(echo "scale=1; ${delta}/1000000000" | bc -l)"
   if [[ "${status}" == "0" ]]; then
-    printf "%.2f s" "${t}"
+    printf "%.1f s" "${t}"
   else
     echo -n "RE"
   fi
