@@ -17,13 +17,13 @@ seeds="0 1 2 3 4 5"
 ./amazon/gen_test "/home/rcsql/z_4" 2 0 "${small}" 2 1 0
 ./amazon/gen_test "/home/rcsql/z_5" 2 0 "${big}" 2 1 0
 
-echo -n "\\multicolumn{1}{r@{\\cspace}|@{\\cspace}}{\\trtime}"
+echo -n "\\multicolumn{1}{r@{\\cspace}@{\\cspace}}{\\trtime}"
 echo -n "&"
-echo -n "\\multicolumn{2}{c|@{\\cspace}}{"
+echo -n "\\multicolumn{2}{c@{\\cspace}}{"
 runNoTO "./src/rtrans.native z_0"
 echo -n "}"
 echo -n "&"
-echo -n "\\multicolumn{2}{c|@{\\cspace}}{"
+echo -n "\\multicolumn{2}{c@{\\cspace}}{"
 runNoTO "./src/rtrans.native z_2"
 echo -n "}"
 echo -n "&"
@@ -42,6 +42,8 @@ line "\\tool\\psqlsub" run01APSQL
 line "\\tool\\msqlsub" run01AMSQL
 line "\\toolnonopt\\psqlsub" run01SPSQL
 line "\\toolnonopt\\msqlsub" run01SMSQL
+
+echo "\\hline"
 
 line "\\vgtool\\psqlsub" run02APSQL
 line "\\vgtool\\msqlsub" run02AMSQL

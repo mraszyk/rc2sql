@@ -24,6 +24,8 @@ line "\\tool\\msqlsub" run01AMSQL
 line "\\toolnonopt\\psqlsub" run01SPSQL
 line "\\toolnonopt\\msqlsub" run01SMSQL
 
+echo "\\hline"
+
 line "\\vgtool\\psqlsub" run02APSQL
 line "\\vgtool\\msqlsub" run02AMSQL
 line "\\vgtoolnonopt\\psqlsub" run02SPSQL
