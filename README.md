@@ -236,7 +236,7 @@ $ pdflatex main.tex
 
 The timeout for the individual experiments can be set
 in the scripts `exps_*.sh`. With the unmodified timeouts of 200s and 400s, respectively,
-the script would take roughly 8 hours to recreate the tables.
+the script would take roughly 12 hours to recreate the tables.
 
 Note. If you want to run the benchmarks with a tool
 that is omitted in the paper because the tool always times out or crashes,
